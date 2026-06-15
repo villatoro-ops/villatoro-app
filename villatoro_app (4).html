@@ -1,0 +1,2138 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>Villatoro — Sistema de Gestión</title>
+
+<!-- Firebase -->
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+  import { getFirestore, collection, addDoc, getDocs, doc, updateDoc, deleteDoc, query, orderBy, where, onSnapshot } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+  import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+  import { getStorage, ref, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-storage.js";
+
+  const firebaseConfig = {
+    apiKey: "AIzaSyBT3KfII_PvabcO-ovZPBUhGXG2d9KPs6s",
+    authDomain: "villatoro-app.firebaseapp.com",
+    projectId: "villatoro-app",
+    storageBucket: "villatoro-app.firebasestorage.app",
+    messagingSenderId: "332539765979",
+    appId: "1:332539765979:web:630a3e9a626b37a19418fe"
+  };
+
+  const app = initializeApp(firebaseConfig);
+  const db = getFirestore(app);
+  const auth = getAuth(app);
+
+  const storage = getStorage(app);
+  window._db = db;
+  window._auth = auth;
+  window._storage = storage;
+  window._firebase = { collection, addDoc, getDocs, doc, updateDoc, deleteDoc, query, orderBy, where, onSnapshot, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, onAuthStateChanged, ref, uploadBytes, getDownloadURL };
+  window._firebaseReady = true;
+  document.dispatchEvent(new Event('firebaseReady'));
+</script>
+
+<style>
+:root {
+  --navy: #1F4E79;
+  --navy-dark: #163C5E;
+  --gold: #C8973A;
+  --silver: #8A9BAE;
+  --bg: #F5F6F8;
+  --white: #FFFFFF;
+  --border: #E2E8EF;
+  --text: #1A1A2E;
+  --text-2: #5A6478;
+  --text-3: #8A9BAE;
+  --success: #2E7D32;
+  --success-bg: #E8F5E9;
+  --warn: #E65100;
+  --warn-bg: #FFF3E0;
+  --danger: #C62828;
+  --danger-bg: #FFEBEE;
+  --info-bg: #E3F2FD;
+  --info: #1565C0;
+  --radius: 12px;
+  --radius-sm: 8px;
+  --shadow: 0 2px 12px rgba(31,78,121,.08);
+  --shadow-lg: 0 8px 32px rgba(31,78,121,.15);
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;font-size:14px}
+input,select,textarea{font-family:inherit;font-size:14px;outline:none;transition:border-color .2s}
+button{font-family:inherit;cursor:pointer}
+
+/* ── AUTH ── */
+.auth-wrap{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:1rem;background:linear-gradient(135deg,var(--navy) 0%,#2E75B6 100%)}
+.auth-card{background:var(--white);border-radius:var(--radius);padding:2rem;width:100%;max-width:360px;box-shadow:var(--shadow-lg)}
+.auth-logo{text-align:center;margin-bottom:1.5rem}
+.auth-logo .v{width:60px;height:60px;background:var(--navy);border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto .75rem;font-size:28px;font-weight:700;color:var(--gold)}
+.auth-logo h1{font-size:18px;font-weight:700;color:var(--navy)}
+.auth-logo p{font-size:12px;color:var(--text-3);margin-top:2px}
+.auth-card .field{margin-bottom:1rem}
+.auth-card label{display:block;font-size:12px;font-weight:600;color:var(--text-2);margin-bottom:5px;text-transform:uppercase;letter-spacing:.04em}
+.auth-card input{width:100%;padding:10px 12px;border:1.5px solid var(--border);border-radius:var(--radius-sm);color:var(--text)}
+.auth-card input:focus{border-color:var(--navy)}
+.auth-err{background:var(--danger-bg);color:var(--danger);font-size:12px;padding:8px 12px;border-radius:var(--radius-sm);margin-bottom:1rem;display:none}
+.btn-primary{width:100%;padding:12px;background:var(--navy);color:var(--white);border:none;border-radius:var(--radius-sm);font-size:14px;font-weight:600;letter-spacing:.02em}
+.btn-primary:active{opacity:.85}
+.btn-gold{background:var(--gold);color:var(--white);border:none;border-radius:var(--radius-sm);font-size:13px;font-weight:600;padding:10px 16px}
+
+/* ── APP SHELL ── */
+.app{display:none;flex-direction:column;min-height:100vh}
+.topbar{background:var(--navy);color:var(--white);padding:.75rem 1rem;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100;box-shadow:0 2px 8px rgba(0,0,0,.2)}
+.topbar-left{display:flex;align-items:center;gap:.75rem}
+.topbar-logo{width:32px;height:32px;background:rgba(255,255,255,.15);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:700;color:var(--gold)}
+.topbar-title{font-size:15px;font-weight:600}
+.topbar-sub{font-size:11px;opacity:.6;margin-top:1px}
+.topbar-right{display:flex;align-items:center;gap:.5rem}
+.icon-btn{background:rgba(255,255,255,.1);border:none;color:var(--white);width:34px;height:34px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:16px}
+
+/* ── NAV ── */
+.bottom-nav{background:var(--white);border-top:1px solid var(--border);display:flex;position:sticky;bottom:0;z-index:100}
+.nav-item{flex:1;padding:.6rem .25rem .5rem;display:flex;flex-direction:column;align-items:center;gap:3px;border:none;background:none;color:var(--text-3);font-size:10px;font-weight:500;transition:color .15s}
+.nav-item.active{color:var(--navy)}
+.nav-item .nav-icon{font-size:20px;line-height:1}
+.nav-item.active .nav-icon{filter:drop-shadow(0 0 4px rgba(31,78,121,.3))}
+
+/* ── CONTENT ── */
+.content{flex:1;overflow-y:auto;padding:1rem;padding-bottom:80px}
+.page{display:none}
+.page.active{display:block}
+
+/* ── CARDS ── */
+.card{background:var(--white);border-radius:var(--radius);padding:1rem;margin-bottom:.75rem;box-shadow:var(--shadow);border:1px solid var(--border)}
+.card-title{font-size:13px;font-weight:700;color:var(--navy);margin-bottom:.75rem;display:flex;justify-content:space-between;align-items:center}
+.section-title{font-size:12px;font-weight:700;color:var(--text-3);text-transform:uppercase;letter-spacing:.06em;margin:.75rem 0 .5rem}
+
+/* ── STATS ── */
+.stats-grid{display:grid;grid-template-columns:1fr 1fr;gap:.6rem;margin-bottom:.75rem}
+.stat{background:var(--white);border-radius:var(--radius);padding:.85rem 1rem;box-shadow:var(--shadow);border:1px solid var(--border)}
+.stat-val{font-size:18px;font-weight:700;color:var(--navy);line-height:1}
+.stat-lbl{font-size:11px;color:var(--text-3);margin-top:3px}
+.stat.danger .stat-val{color:var(--danger)}
+.stat.warn .stat-val{color:var(--warn)}
+.stat.success .stat-val{color:var(--success)}
+
+/* ── ALERTS ── */
+.alert{border-radius:var(--radius-sm);padding:.65rem .9rem;font-size:12px;margin-bottom:.6rem;display:flex;align-items:flex-start;gap:.5rem}
+.alert-danger{background:var(--danger-bg);color:var(--danger);border:1px solid #FFCDD2}
+.alert-warn{background:var(--warn-bg);color:var(--warn);border:1px solid #FFE0B2}
+.alert-success{background:var(--success-bg);color:var(--success);border:1px solid #C8E6C9}
+.alert-info{background:var(--info-bg);color:var(--info);border:1px solid #BBDEFB}
+
+/* ── FORM ── */
+.field{margin-bottom:.85rem}
+.field label{display:block;font-size:11px;font-weight:600;color:var(--text-2);margin-bottom:4px;text-transform:uppercase;letter-spacing:.04em}
+.field input,.field select,.field textarea{width:100%;padding:9px 11px;border:1.5px solid var(--border);border-radius:var(--radius-sm);color:var(--text);background:var(--white)}
+.field input:focus,.field select:focus,.field textarea:focus{border-color:var(--navy)}
+.field textarea{resize:vertical;min-height:70px}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:.75rem}
+.row3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:.5rem}
+
+/* ── ITEMS LIST ── */
+.item-row{background:var(--white);border-radius:var(--radius-sm);padding:.75rem 1rem;margin-bottom:.5rem;border:1px solid var(--border);position:relative}
+.item-row:active{background:#F8FAFC}
+.item-top{display:flex;justify-content:space-between;align-items:flex-start;gap:.5rem;margin-bottom:3px}
+.item-name{font-size:13px;font-weight:600;color:var(--text);flex:1;line-height:1.3}
+.item-amount{font-size:14px;font-weight:700;color:var(--navy);white-space:nowrap}
+.item-meta{font-size:11px;color:var(--text-3);line-height:1.5}
+.badge{display:inline-block;padding:2px 8px;border-radius:999px;font-size:10px;font-weight:600}
+.badge-danger{background:var(--danger-bg);color:var(--danger)}
+.badge-warn{background:var(--warn-bg);color:var(--warn)}
+.badge-success{background:var(--success-bg);color:var(--success)}
+.badge-info{background:var(--info-bg);color:var(--info)}
+.badge-gray{background:#F0F2F5;color:var(--text-2)}
+
+/* ── FAB ── */
+.fab{position:fixed;bottom:72px;right:16px;width:52px;height:52px;border-radius:50%;background:var(--gold);color:var(--white);border:none;font-size:24px;box-shadow:0 4px 16px rgba(200,151,58,.4);display:flex;align-items:center;justify-content:center;z-index:50}
+.fab:active{transform:scale(.95)}
+
+/* ── MODAL ── */
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:200;display:none;align-items:flex-end;justify-content:center}
+.modal-overlay.open{display:flex}
+.modal{background:var(--white);border-radius:var(--radius) var(--radius) 0 0;width:100%;max-width:480px;max-height:90vh;overflow-y:auto;padding:1.25rem 1rem 2rem}
+.modal-handle{width:36px;height:4px;background:var(--border);border-radius:2px;margin:0 auto 1rem}
+.modal-title{font-size:16px;font-weight:700;color:var(--navy);margin-bottom:1rem}
+.modal-actions{display:flex;gap:.75rem;margin-top:1rem}
+.modal-actions button{flex:1;padding:11px;border-radius:var(--radius-sm);font-size:13px;font-weight:600;border:none}
+.btn-cancel{background:var(--bg);color:var(--text-2)}
+.btn-save{background:var(--navy);color:var(--white)}
+.btn-danger-full{background:var(--danger-bg);color:var(--danger)}
+
+/* ── TABS ── */
+.tabs{display:flex;background:var(--bg);border-radius:var(--radius-sm);padding:3px;margin-bottom:1rem;gap:2px}
+.tab-btn{flex:1;padding:7px;border:none;background:none;border-radius:6px;font-size:12px;font-weight:500;color:var(--text-3);transition:all .15s}
+.tab-btn.active{background:var(--white);color:var(--navy);font-weight:700;box-shadow:0 1px 4px rgba(0,0,0,.1)}
+
+/* ── OC CAPTURE ── */
+.oc-items-table{width:100%;border-collapse:collapse;font-size:12px;margin-top:.75rem}
+.oc-items-table th{background:var(--navy);color:var(--white);padding:6px 8px;text-align:left;font-size:11px}
+.oc-items-table td{padding:6px 8px;border-bottom:1px solid var(--border)}
+.oc-items-table tr:nth-child(even) td{background:#F8FAFC}
+
+/* ── FINANCES ── */
+.fin-row{display:flex;justify-content:space-between;align-items:center;padding:.6rem 0;border-bottom:1px solid var(--border);font-size:13px}
+.fin-row:last-child{border-bottom:none}
+.fin-lbl{color:var(--text-2)}
+.fin-val{font-weight:600;color:var(--navy)}
+.fin-val.positive{color:var(--success)}
+.fin-val.negative{color:var(--danger)}
+.fin-val.warn{color:var(--warn)}
+
+/* ── LOADING ── */
+.loading{text-align:center;padding:2rem;color:var(--text-3);font-size:13px}
+.spinner{width:24px;height:24px;border:3px solid var(--border);border-top-color:var(--navy);border-radius:50%;animation:spin .7s linear infinite;margin:0 auto .75rem}
+@keyframes spin{to{transform:rotate(360deg)}}
+.empty{text-align:center;padding:2rem 1rem;color:var(--text-3);font-size:13px}
+.empty-icon{font-size:36px;margin-bottom:.5rem}
+
+/* ── UTILS ── */
+.divider{height:1px;background:var(--border);margin:.75rem 0}
+.text-right{text-align:right}
+.text-center{text-align:center}
+.mt-1{margin-top:.5rem}
+.fw-600{font-weight:600}
+.text-navy{color:var(--navy)}
+.text-gold{color:var(--gold)}
+.text-danger{color:var(--danger)}
+.text-success{color:var(--success)}
+.hidden{display:none}
+</style>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script>
+  if(window.pdfjsLib) pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+</script>
+</head>
+<body>
+
+<!-- AUTH -->
+<div class="auth-wrap" id="authWrap">
+  <div class="auth-card">
+    <div class="auth-logo">
+      <div class="v">V</div>
+      <h1>Comercializadora Villatoro</h1>
+      <p>Sistema de Gestión Empresarial</p>
+    </div>
+    <div class="auth-err" id="authErr"></div>
+    <div class="field">
+      <label>Correo</label>
+      <input type="email" id="loginEmail" placeholder="correo@ejemplo.com" autocomplete="email">
+    </div>
+    <div class="field">
+      <label>Contraseña</label>
+      <input type="password" id="loginPass" placeholder="••••••••" autocomplete="current-password">
+    </div>
+    <button class="btn-primary" onclick="doLogin()">Iniciar sesión</button>
+    <div style="text-align:center;margin-top:.75rem">
+      <span style="font-size:12px;color:var(--text-3)">¿Primera vez? </span>
+      <span style="font-size:12px;color:var(--navy);cursor:pointer;font-weight:600" onclick="showRegister()">Crear cuenta</span>
+    </div>
+  </div>
+</div>
+
+<!-- REGISTER MODAL -->
+<div class="modal-overlay" id="registerModal">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-title">Crear cuenta</div>
+    <div class="field"><label>Nombre</label><input type="text" id="regName" placeholder="Tu nombre"></div>
+    <div class="field"><label>Correo</label><input type="email" id="regEmail" placeholder="correo@ejemplo.com"></div>
+    <div class="field"><label>Contraseña</label><input type="password" id="regPass" placeholder="Mínimo 6 caracteres"></div>
+    <div class="field">
+      <label>Rol</label>
+      <select id="regRole">
+        <option value="admin">Administrador (acceso completo)</option>
+        <option value="operativo">Operativo (cotizador y entregas)</option>
+      </select>
+    </div>
+    <div class="modal-actions">
+      <button class="btn-cancel" onclick="closeModal('registerModal')">Cancelar</button>
+      <button class="btn-save" onclick="doRegister()">Crear cuenta</button>
+    </div>
+  </div>
+</div>
+
+<!-- APP -->
+<div class="app" id="appWrap">
+  <div class="topbar">
+    <div class="topbar-left">
+      <div class="topbar-logo">V</div>
+      <div>
+        <div class="topbar-title">Villatoro</div>
+        <div class="topbar-sub" id="topbarSub">Cargando...</div>
+      </div>
+    </div>
+    <div class="topbar-right">
+      <button class="icon-btn" onclick="doSignOut()" title="Cerrar sesión">⎋</button>
+    </div>
+  </div>
+
+  <div class="content">
+
+    <!-- DASHBOARD -->
+    <div class="page active" id="page-dashboard">
+      <div class="stats-grid">
+        <div class="stat danger"><div class="stat-val" id="s-vencido">$0</div><div class="stat-lbl">Cartera vencida</div></div>
+        <div class="stat warn"><div class="stat-val" id="s-pendiente">$0</div><div class="stat-lbl">Por cobrar total</div></div>
+        <div class="stat"><div class="stat-val" id="s-ocs">0</div><div class="stat-lbl">OCs por surtir</div></div>
+        <div class="stat success"><div class="stat-val" id="s-cobrado">$0</div><div class="stat-lbl">Cobrado este mes</div></div>
+      </div>
+      <div id="alertas-container"></div>
+      <div class="section-title">Actividad reciente</div>
+      <div id="actividad-lista"><div class="loading"><div class="spinner"></div>Cargando...</div></div>
+    </div>
+
+    <!-- OCS -->
+    <div class="page" id="page-ocs">
+      <div class="tabs">
+        <button class="tab-btn active" onclick="setOCTab('pendiente',this)">Por surtir</button>
+        <button class="tab-btn" onclick="setOCTab('surtido',this)">Surtido</button>
+        <button class="tab-btn" onclick="setOCTab('surtida',this)">Surtidas</button>
+        <button class="tab-btn" onclick="setOCTab('capturar',this)">Capturar OC</button>
+      </div>
+      <div id="oc-tab-pendiente">
+        <div class="card" style="padding:.75rem">
+          <input type="text" id="oc-search" placeholder="🔍 Buscar por OC, cliente o artículo..." oninput="filtrarOCs()" style="margin-bottom:.5rem">
+          <div style="display:flex;gap:.5rem">
+            <select id="oc-filter-razon" onchange="filtrarOCs()" style="flex:1;padding:7px 8px;border:1.5px solid var(--border);border-radius:var(--radius-sm);font-size:12px">
+              <option value="">Todas las razones sociales</option>
+              <option>AGRICOLA CIVE</option>
+              <option>AGRICOLA ZARATTINI</option>
+              <option>SAN ANTONIO AGRICULTURA MODERNA</option>
+              <option>PEBBLE PEPPERS</option>
+            </select>
+            <select id="oc-filter-tipo" onchange="filtrarOCs()" style="flex:1;padding:7px 8px;border:1.5px solid var(--border);border-radius:var(--radius-sm);font-size:12px">
+              <option value="">Todos los tipos</option>
+              <option value="producto">Productos</option>
+              <option value="servicio">Servicios</option>
+            </select>
+          </div>
+        </div>
+        <div id="ocs-pendiente-list"><div class="loading"><div class="spinner"></div>Cargando...</div></div>
+      </div>
+      <div id="oc-tab-surtido" class="hidden">
+        <div class="card" style="padding:.75rem">
+          <div style="font-size:12px;color:var(--text-2);margin-bottom:.5rem">Lista de productos pendientes de surtir agrupados por OC. Actualiza el status de cada artículo.</div>
+          <input type="text" id="surtido-search" placeholder="🔍 Buscar producto u OC..." oninput="filtrarSurtido()" style="margin-bottom:.5rem">
+          <select id="surtido-filter" onchange="filtrarSurtido()" style="width:100%;padding:7px 8px;border:1.5px solid var(--border);border-radius:var(--radius-sm);font-size:12px">
+            <option value="">Todos los status</option>
+            <option value="pendiente">Pendiente cotizar</option>
+            <option value="solicitado">Solicitado a proveedor</option>
+            <option value="comprado">Comprado / en camino</option>
+            <option value="disponible">Disponible para entregar</option>
+            <option value="entregado">Entregado</option>
+          </select>
+        </div>
+        <div id="surtido-list"><div class="loading"><div class="spinner"></div>Cargando...</div></div>
+      </div>
+
+      <div id="oc-tab-surtida" class="hidden">
+        <div class="card" style="padding:.75rem">
+          <input type="text" id="oc-search-s" placeholder="🔍 Buscar OC surtida..." oninput="filtrarOCsSurtidas()" style="margin-bottom:.5rem">
+          <select id="oc-filter-razon-s" onchange="filtrarOCsSurtidas()" style="width:100%;padding:7px 8px;border:1.5px solid var(--border);border-radius:var(--radius-sm);font-size:12px">
+            <option value="">Todas las razones sociales</option>
+            <option>AGRICOLA CIVE</option>
+            <option>AGRICOLA ZARATTINI</option>
+            <option>SAN ANTONIO AGRICULTURA MODERNA</option>
+            <option>PEBBLE PEPPERS</option>
+          </select>
+        </div>
+        <div id="ocs-surtida-list"><div class="loading"><div class="spinner"></div>Cargando...</div></div>
+      </div>
+      <div id="oc-tab-capturar" class="hidden">
+        <div class="card">
+          <div class="card-title">Capturar OC</div>
+          <div class="tabs" style="margin-bottom:.75rem">
+            <button class="tab-btn" onclick="setCapturaTab('pdf',this)">📄 Subir PDF</button>
+            <button class="tab-btn active" onclick="setCapturaTab('texto',this)">✏️ Manual</button>
+          </div>
+
+          <div id="captura-pdf" class="hidden">
+            <div id="pdf-dropzone" style="border:2px dashed var(--border);border-radius:var(--radius);padding:2rem;text-align:center;cursor:pointer;background:var(--bg)" onclick="document.getElementById('pdf-input').click()">
+              <div style="font-size:32px;margin-bottom:.5rem">📄</div>
+              <div style="font-size:13px;font-weight:600;color:var(--navy)">Toca para seleccionar el PDF de la OC</div>
+              <div style="font-size:11px;color:var(--text-3);margin-top:4px">Se extraerán los datos automáticamente</div>
+            </div>
+            <input type="file" id="pdf-input" accept=".pdf" style="display:none" onchange="leerPDF(this)">
+            <div id="pdf-status" style="display:none" class="alert alert-info mt-1">Procesando PDF...</div>
+          </div>
+
+          <div id="captura-texto">
+            <div class="field">
+              <label>Pega el texto de la OC aquí</label>
+              <textarea id="oc-texto" rows="8" placeholder="Copia y pega el contenido del PDF de la OC..."></textarea>
+            </div>
+            <button class="btn-gold" style="width:100%;padding:11px;border-radius:var(--radius-sm)" onclick="procesarOC()">🔍 Procesar OC</button>
+          </div>
+        </div>
+        <div id="oc-preview" class="hidden"></div>
+      </div>
+    </div>
+
+    <!-- ESTADO DE CUENTA -->
+    <div class="page" id="page-estado">
+      <div class="tabs">
+        <button class="tab-btn active" onclick="setEdoTab('facturas',this)">Facturas</button>
+        <button class="tab-btn" onclick="setEdoTab('spei',this)">SPEIs</button>
+        <button class="tab-btn" onclick="setEdoTab('conciliar',this)">Conciliar</button>
+        <button class="tab-btn" onclick="setEdoTab('nuevo',this)">Registrar</button>
+      </div>
+      <div id="edo-tab-facturas">
+        <div class="card" style="padding:.75rem">
+          <input type="text" id="fac-search" placeholder="🔍 Buscar por folio, OC, cliente o monto..." oninput="filtrarFacturas()" style="margin-bottom:.5rem">
+          <div style="display:flex;gap:.5rem">
+            <select id="fac-filter-status" onchange="filtrarFacturas()" style="flex:1;padding:7px 8px;border:1.5px solid var(--border);border-radius:var(--radius-sm);font-size:12px">
+              <option value="">Todos los status</option>
+              <option value="pendiente">Pendiente</option>
+              <option value="abono">Con abono</option>
+              <option value="pagada">Pagada</option>
+            </select>
+            <select id="fac-filter-razon" onchange="filtrarFacturas()" style="flex:1;padding:7px 8px;border:1.5px solid var(--border);border-radius:var(--radius-sm);font-size:12px">
+              <option value="">Todas</option>
+              <option>AGRICOLA CIVE</option>
+              <option>AGRICOLA ZARATTINI</option>
+              <option>SAN ANTONIO AGRICULTURA MODERNA</option>
+              <option>PEBBLE PEPPERS</option>
+            </select>
+          </div>
+        </div>
+        <div id="facturas-list"><div class="loading"><div class="spinner"></div>Cargando...</div></div>
+      </div>
+      <div id="edo-tab-spei" class="hidden">
+        <div id="spei-list"><div class="loading"><div class="spinner"></div>Cargando...</div></div>
+      </div>
+      <div id="edo-tab-conciliar" class="hidden">
+        <div class="card">
+          <div class="card-title">Conciliación SPEI ↔ Facturas</div>
+          <p style="font-size:12px;color:var(--text-2);margin-bottom:.75rem">SPEIs sin relación asignada. Selecciona uno para aplicarlo a facturas manualmente.</p>
+          <div id="conciliar-spei-list"><div class="loading"><div class="spinner"></div>Cargando...</div></div>
+        </div>
+        <div id="conciliar-aplicar" class="hidden">
+          <div class="card">
+            <div class="card-title" id="conciliar-spei-titulo">Aplicar SPEI</div>
+            <div id="conciliar-sugerencias"></div>
+            <div class="section-title" style="margin-top:.75rem">Facturas pendientes</div>
+            <div id="conciliar-facturas-lista"></div>
+            <div class="card" style="margin-top:.75rem;background:var(--bg)">
+              <div class="fin-row"><span class="fin-lbl">SPEI</span><span class="fin-val" id="c-spei-monto">$0</span></div>
+              <div class="fin-row"><span class="fin-lbl">Seleccionado</span><span class="fin-val" id="c-sel-monto" style="color:var(--gold)">$0</span></div>
+              <div class="fin-row"><span class="fin-lbl">Diferencia</span><span class="fin-val" id="c-diff-monto">$0</span></div>
+            </div>
+            <div class="modal-actions mt-1">
+              <button class="btn-cancel" onclick="cancelarConciliar()">Cancelar</button>
+              <button class="btn-save" onclick="aplicarConciliacion()">Aplicar pagos</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div id="edo-tab-nuevo" class="hidden">
+        <div class="card">
+          <div class="card-title">Registrar factura</div>
+          <div class="row2">
+            <div class="field"><label>Folio</label><input type="text" id="f-folio" placeholder="VV-A-00001"></div>
+            <div class="field"><label>Fecha</label><input type="date" id="f-fecha"></div>
+          </div>
+          <div class="field"><label>OC Referencia</label><input type="text" id="f-oc" placeholder="OC20423"></div>
+          <div class="row2">
+            <div class="field"><label>Subtotal s/IVA</label><input type="number" id="f-sub" placeholder="0.00"></div>
+            <div class="field"><label>Total c/IVA</label><input type="number" id="f-total" placeholder="0.00"></div>
+          </div>
+          <div class="field">
+            <label>Razón social</label>
+            <select id="f-razon">
+              <option>AGRICOLA CIVE SA DE CV</option>
+              <option>AGRICOLA ZARATTINI</option>
+              <option>PEBBLE PEPPERS</option>
+              <option>SAN ANTONIO AGRICULTURA MODERNA</option>
+              <option>Otro</option>
+            </select>
+          </div>
+          <div class="field">
+            <label>Tipo de pago</label>
+            <select id="f-tipo-pago">
+              <option value="">Por cobrar (pendiente)</option>
+              <option value="spei">SPEI / Transferencia</option>
+              <option value="efectivo">Efectivo</option>
+              <option value="tarjeta">Tarjeta</option>
+              <option value="cheque">Cheque</option>
+            </select>
+          </div>
+          <button class="btn-save" style="width:100%;padding:11px;border-radius:var(--radius-sm)" onclick="guardarFactura()">Guardar factura</button>
+        </div>
+        <div class="card">
+          <div class="card-title">Registrar pago SPEI</div>
+          <div class="row2">
+            <div class="field"><label>No. SPEI / Rastreo</label><input type="text" id="sp-num" placeholder="130320201"></div>
+            <div class="field"><label>Fecha</label><input type="date" id="sp-fecha"></div>
+          </div>
+          <div class="field"><label>Monto</label><input type="number" id="sp-monto" placeholder="0.00"></div>
+          <div class="field"><label>Ordenante</label><input type="text" id="sp-ordenante" placeholder="AGRICOLA CIVE SA DE CV"></div>
+          <div class="field">
+            <label>Pegar relación de facturas (opcional)</label>
+            <textarea id="sp-relacion" rows="4" placeholder="1044&#10;4,058.84&#10;1611&#10;7,714.00"></textarea>
+          </div>
+          <button class="btn-save" style="width:100%;padding:11px;border-radius:var(--radius-sm)" onclick="guardarSPEI()">Registrar pago</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- FINANZAS (solo admin) -->
+    <div class="page" id="page-finanzas">
+      <div class="alert alert-info">🔒 Esta sección es privada — solo visible para administradores.</div>
+      <div class="card">
+        <div class="card-title">Costos operativos mensuales</div>
+        <div class="field"><label>Precio gasolina ($/lt)</label><input type="number" id="fin-gas" placeholder="28.50"></div>
+        <div class="row2">
+          <div class="field"><label>Km entrega/mes</label><input type="number" id="fin-km-e" placeholder="200"></div>
+          <div class="field"><label>Km compras/mes</label><input type="number" id="fin-km-c" placeholder="280"></div>
+        </div>
+        <div class="row2">
+          <div class="field"><label>Seguro mensual</label><input type="number" id="fin-seguro" placeholder="1500"></div>
+          <div class="field"><label>Mantenimiento</label><input type="number" id="fin-mant" placeholder="800"></div>
+        </div>
+        <div class="row2">
+          <div class="field"><label>Valor RAM ($)</label><input type="number" id="fin-ram" placeholder="315000"></div>
+          <div class="field"><label>Vida útil (años)</label><input type="number" id="fin-vida" placeholder="5"></div>
+        </div>
+        <div class="field"><label>Sueldo objetivo mensual</label><input type="number" id="fin-sueldo" placeholder="15000"></div>
+        <div class="field"><label>OCs promedio por mes</label><input type="number" id="fin-ocs" placeholder="8"></div>
+        <button class="btn-gold" style="width:100%;padding:11px;border-radius:var(--radius-sm);margin-top:.25rem" onclick="calcFinanzas()">Calcular</button>
+      </div>
+      <div id="fin-resultados" class="hidden">
+        <div class="card">
+          <div class="card-title">Resumen financiero</div>
+          <div id="fin-rows"></div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-title">Meta mensual</div>
+        <div class="field"><label>Facturación objetivo</label><input type="number" id="fin-meta" placeholder="80000"></div>
+        <div id="fin-meta-res"></div>
+        <button class="btn-save" style="width:100%;padding:10px;border-radius:var(--radius-sm);margin-top:.5rem" onclick="guardarMeta()">Guardar meta</button>
+      </div>
+    </div>
+
+    <!-- RESUMEN / EXPORTAR -->
+    <div class="page" id="page-resumen">
+      <div class="card">
+        <div class="card-title">Estado de cuenta para cliente</div>
+        <p style="font-size:12px;color:var(--text-2);margin-bottom:.75rem">Genera el Excel completo con datos actuales para enviar a CIVE/cliente.</p>
+        <div class="field">
+          <label>Cliente</label>
+          <select id="edo-cliente">
+            <option value="AGRICOLA CIVE">AGRÍCOLA CIVE (Agrizar)</option>
+            <option value="AGRICOLA ZARATTINI">AGRÍCOLA ZARATTINI</option>
+            <option value="SAN ANTONIO AGRICULTURA MODERNA">SAN ANTONIO AGRICULTURA MODERNA</option>
+            <option value="PEBBLE PEPPERS">PEBBLE PEPPERS</option>
+            <option value="">Todos los clientes</option>
+          </select>
+        </div>
+        <button class="btn-gold" style="width:100%;padding:11px;border-radius:var(--radius-sm)" onclick="generarEstadoCuenta()">📊 Generar Excel estado de cuenta</button>
+        <div id="edo-status" style="display:none;margin-top:.75rem" class="alert alert-info">Generando...</div>
+      </div>
+      <div class="card">
+        <div class="card-title">Exportar respaldo mensual</div>
+        <p style="font-size:12px;color:var(--text-2);margin-bottom:1rem">Genera un resumen completo del estado de cuenta para guardar como respaldo.</p>
+        <button class="btn-gold" style="width:100%;padding:11px;border-radius:var(--radius-sm)" onclick="exportarResumen()">📄 Exportar resumen</button>
+      </div>
+      <div class="card">
+        <div class="card-title">Estado de cuenta — resumen</div>
+        <div id="resumen-datos"><div class="loading"><div class="spinner"></div>Cargando...</div></div>
+      </div>
+    </div>
+
+  </div><!-- end content -->
+
+  <nav class="bottom-nav">
+    <button class="nav-item active" onclick="showPage('dashboard',this)">
+      <span class="nav-icon">🏠</span><span>Inicio</span>
+    </button>
+    <button class="nav-item" onclick="showPage('ocs',this)">
+      <span class="nav-icon">📦</span><span>OCs</span>
+    </button>
+    <button class="nav-item" onclick="showPage('estado',this)">
+      <span class="nav-icon">📊</span><span>Cuentas</span>
+    </button>
+    <button class="nav-item" id="nav-finanzas" onclick="showPage('finanzas',this)">
+      <span class="nav-icon">💰</span><span>Finanzas</span>
+    </button>
+    <button class="nav-item" onclick="showPage('resumen',this)">
+      <span class="nav-icon">📋</span><span>Resumen</span>
+    </button>
+  </nav>
+</div>
+
+<!-- FACTURA PAGO MODAL -->
+<div class="modal-overlay" id="facPagoModal">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-title">Registrar pago</div>
+    <div id="facPagoModal-info" style="margin-bottom:1rem;padding:.75rem;background:var(--bg);border-radius:var(--radius-sm)"></div>
+    <div class="field">
+      <label>Método de pago</label>
+      <select id="fac-pago-tipo">
+        <option value="spei">SPEI / Transferencia</option>
+        <option value="efectivo">Efectivo</option>
+        <option value="tarjeta">Tarjeta</option>
+        <option value="cheque">Cheque</option>
+        <option value="abono">Abono parcial</option>
+      </select>
+    </div>
+    <div class="field">
+      <label>Fecha de pago</label>
+      <input type="date" id="fac-pago-fecha">
+    </div>
+    <div class="field" id="fac-pago-ref-field">
+      <label>Referencia (No. SPEI, folio cheque, etc.)</label>
+      <input type="text" id="fac-pago-ref" placeholder="Opcional">
+    </div>
+    <div class="field" id="fac-pago-monto-field" style="display:none">
+      <label>Monto abonado</label>
+      <input type="number" id="fac-pago-monto" placeholder="0.00">
+    </div>
+    <div class="modal-actions">
+      <button class="btn-cancel" onclick="closeModal('facPagoModal')">Cancelar</button>
+      <button class="btn-save" onclick="aplicarPagoFactura()">Marcar pagada</button>
+    </div>
+  </div>
+</div>
+
+<!-- OC DETAIL MODAL -->
+<div class="modal-overlay" id="ocModal">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-title" id="ocModal-title">Detalle OC</div>
+    <div id="ocModal-body"></div>
+    <div class="modal-actions">
+      <button class="btn-cancel" onclick="closeModal('ocModal')">Cerrar</button>
+      <button class="btn-save" id="ocModal-action" onclick="">Marcar surtida</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const fmt = n => isNaN(n) ? '$0.00' : Number(n).toLocaleString('es-MX',{style:'currency',currency:'MXN',minimumFractionDigits:2});
+const today = () => new Date().toISOString().split('T')[0];
+let currentUser = null, userRole = 'operativo', db, firebase;
+
+// Wait for Firebase
+document.addEventListener('firebaseReady', () => {
+  db = window._db;
+  firebase = window._firebase;
+  firebase.onAuthStateChanged(window._auth, async user => {
+    if(user) {
+      currentUser = user;
+      // Get role
+      try {
+        const snap = await firebase.getDocs(firebase.query(firebase.collection(db,'users'),firebase.where('uid','==',user.uid)));
+        if(!snap.empty) { const d=snap.docs[0].data(); userRole=d.role||'operativo'; }
+      } catch(e) { userRole='admin'; }
+      showApp();
+    } else {
+      showAuth();
+    }
+  });
+});
+
+function showAuth() {
+  document.getElementById('authWrap').style.display='flex';
+  document.getElementById('appWrap').style.display='none';
+}
+
+function showApp() {
+  document.getElementById('authWrap').style.display='none';
+  document.getElementById('appWrap').style.display='flex';
+  document.getElementById('topbarSub').textContent = currentUser.email;
+  if(userRole !== 'admin') {
+    document.getElementById('nav-finanzas').style.display='none';
+  }
+  loadDashboard();
+  setTodayDates();
+}
+
+function setTodayDates() {
+  const t = today();
+  ['f-fecha','sp-fecha'].forEach(id => { const el=document.getElementById(id); if(el) el.value=t; });
+}
+
+async function doLogin() {
+  const email = document.getElementById('loginEmail').value.trim();
+  const pass = document.getElementById('loginPass').value;
+  const err = document.getElementById('authErr');
+  err.style.display='none';
+  try {
+    await firebase.signInWithEmailAndPassword(window._auth, email, pass);
+  } catch(e) {
+    err.style.display='block';
+    err.textContent = e.code === 'auth/invalid-credential' ? 'Correo o contraseña incorrectos' : 'Error al iniciar sesión: ' + e.message;
+  }
+}
+
+function showRegister() { openModal('registerModal'); }
+
+async function doRegister() {
+  const name = document.getElementById('regName').value.trim();
+  const email = document.getElementById('regEmail').value.trim();
+  const pass = document.getElementById('regPass').value;
+  const role = document.getElementById('regRole').value;
+  try {
+    const cred = await firebase.createUserWithEmailAndPassword(window._auth, email, pass);
+    await firebase.addDoc(firebase.collection(db,'users'), { uid: cred.user.uid, name, email, role, createdAt: new Date().toISOString() });
+    closeModal('registerModal');
+  } catch(e) {
+    alert('Error: ' + e.message);
+  }
+}
+
+async function doSignOut() {
+  await firebase.signOut(window._auth);
+}
+
+// ── NAVIGATION ──
+function showPage(id, el) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  document.getElementById('page-'+id).classList.add('active');
+  if(el) el.classList.add('active');
+  if(id==='estado') loadEstado();
+  if(id==='ocs') loadOCs();
+  if(id==='resumen') loadResumen();
+  if(id==='dashboard') loadDashboard();
+}
+
+function cancelOCPreview() { document.getElementById('oc-preview').classList.add('hidden'); }
+function openModal(id) { document.getElementById(id).classList.add('open'); }
+function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+
+// ── TABS ──
+function setOCTab(tab, el) {
+  ['pendiente','surtido','surtida','capturar'].forEach(function(t) {
+    document.getElementById('oc-tab-'+t).classList.add('hidden');
+  });
+  document.querySelectorAll('#page-ocs .tab-btn').forEach(function(b) { b.classList.remove('active'); });
+  document.getElementById('oc-tab-'+tab).classList.remove('hidden');
+  if(el) el.classList.add('active');
+  if(tab === 'surtido') loadSurtido();
+}
+
+function setEdoTab(tab, el) {
+  ['facturas','spei','conciliar','nuevo'].forEach(t => {
+    document.getElementById('edo-tab-'+t).classList.add('hidden');
+  });
+  document.querySelectorAll('#page-estado .tab-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('edo-tab-'+tab).classList.remove('hidden');
+  if(el) el.classList.add('active');
+  if(tab === 'conciliar') loadConciliacion();
+}
+
+// ── DASHBOARD ──
+async function loadDashboard() {
+  try {
+    const [facSnap, ocSnap, speiSnap] = await Promise.all([
+      firebase.getDocs(firebase.collection(db,'facturas')),
+      firebase.getDocs(firebase.collection(db,'ocs')),
+      firebase.getDocs(firebase.collection(db,'speis'))
+    ]);
+
+    const hoy = new Date(); let vencido=0, pendiente=0, cobradoMes=0;
+    const alertas = [];
+
+    facSnap.docs.forEach(d => {
+      const f = d.data();
+      if(f.status !== 'pagada') {
+        const total = Number(f.total)||0;
+        pendiente += total;
+        const fecha = new Date(f.fecha);
+        const dias = Math.floor((hoy-fecha)/86400000);
+        if(dias > 15) { vencido += total; }
+        if(dias > 60) alertas.push({type:'danger', msg:'Factura ' + f.folio + ' lleva ' + dias + ' días vencida — ' + fmt(total)});
+        else if(dias > 30) alertas.push({type:'warn', msg:'Factura ' + f.folio + ' lleva ' + dias + ' días sin pago'});
+      }
+    });
+
+    const mesActual = hoy.toISOString().slice(0,7);
+    speiSnap.docs.forEach(d => {
+      const s = d.data();
+      if(s.fecha && s.fecha.startsWith(mesActual)) cobradoMes += Number(s.monto)||0;
+    });
+
+    const ocsP = ocSnap.docs.filter(d => d.data().status === 'pendiente').length;
+
+    document.getElementById('s-vencido').textContent = fmt(vencido);
+    document.getElementById('s-pendiente').textContent = fmt(pendiente);
+    document.getElementById('s-ocs').textContent = ocsP;
+    document.getElementById('s-cobrado').textContent = fmt(cobradoMes);
+
+    const alertCont = document.getElementById('alertas-container');
+    alertCont.innerHTML = alertas.slice(0,3).map(a =>
+      '<div class="alert alert-'+a.type+'">⚠️ '+a.msg+'</div>'
+    ).join('');
+
+    // Recent activity
+    const all = [...facSnap.docs.map(d=>({...d.data(),tipo:'factura',id:d.id})),
+                 ...speiSnap.docs.map(d=>({...d.data(),tipo:'spei',id:d.id})),
+                 ...ocSnap.docs.map(d=>({...d.data(),tipo:'oc',id:d.id}))]
+      .sort((a,b) => new Date(b.fecha||b.createdAt||0) - new Date(a.fecha||a.createdAt||0))
+      .slice(0,8);
+
+    document.getElementById('actividad-lista').innerHTML = all.length ? all.map(function(item) {
+      if(item.tipo==='factura') return '<div class="item-row"><div class="item-top"><span class="item-name">📄 '+item.folio+'</span><span class="item-amount">'+fmt(item.total)+'</span></div><div class="item-meta">'+(item.razon||'')+' · '+(item.fecha||'')+' <span class="badge badge-'+(item.status==='pagada'?'success':'warn')+'">'+(item.status||'pendiente')+'</span></div></div>';
+      if(item.tipo==='spei') return '<div class="item-row"><div class="item-top"><span class="item-name">💳 '+(item.numero||'')+'</span><span class="item-amount text-success">'+fmt(item.monto)+'</span></div><div class="item-meta">'+(item.ordenante||'')+' · '+(item.fecha||'')+'</div></div>';
+      return '<div class="item-row"><div class="item-top"><span class="item-name">📦 '+(item.numero||'OC')+'</span><span class="item-amount">'+fmt(item.totalOC)+'</span></div><div class="item-meta">'+(item.fecha||'')+' <span class="badge badge-'+(item.status==='surtida'?'success':'info')+'">'+(item.status||'pendiente')+'</span></div></div>';
+    }).join('') : '<div class="empty"><div class="empty-icon">📋</div>Sin actividad aún</div>';
+
+  } catch(e) {
+    console.error(e);
+    document.getElementById('actividad-lista').innerHTML = '<div class="empty">Error al cargar datos</div>';
+  }
+}
+
+// ── OCS ──
+var _allOCDocs = [];
+
+async function loadOCs() {
+  try {
+    const snap = await firebase.getDocs(firebase.query(firebase.collection(db,'ocs'), firebase.orderBy('fecha','desc')));
+    _allOCDocs = snap.docs;
+    filtrarOCs();
+    filtrarOCsSurtidas();
+  } catch(e) {
+    ['ocs-pendiente-list','ocs-surtida-list'].forEach(id => {
+      document.getElementById(id).innerHTML = '<div class="empty">Error al cargar OCs</div>';
+    });
+  }
+}
+
+function getTipoOC(oc) {
+  if(!oc.articulos || !oc.articulos.length) return 'producto';
+  const hasServ = oc.articulos.some(function(a){ return a.unidad && a.unidad.toUpperCase().indexOf('SERV') >= 0; });
+  return hasServ ? 'servicio' : 'producto';
+}
+
+function filtrarOCs() {
+  const q = (document.getElementById('oc-search')||{value:''}).value.toLowerCase();
+  const razon = (document.getElementById('oc-filter-razon')||{value:''}).value;
+  const tipo = (document.getElementById('oc-filter-tipo')||{value:''}).value;
+  const docs = _allOCDocs.filter(function(d) {
+    const oc = d.data();
+    if(oc.status === 'surtida') return false;
+    if(razon && (oc.razon||'').toUpperCase().indexOf(razon.toUpperCase()) < 0) return false;
+    if(tipo && getTipoOC(oc) !== tipo) return false;
+    if(q) {
+      const searchStr = (oc.numero||'') + ' ' + (oc.razon||'') + ' ' + (oc.comprador||'') + ' ' + JSON.stringify(oc.articulos||[]);
+      if(searchStr.toLowerCase().indexOf(q) < 0) return false;
+    }
+    return true;
+  });
+  renderOCList(docs, 'ocs-pendiente-list', 'pendiente');
+}
+
+function filtrarOCsSurtidas() {
+  const q = (document.getElementById('oc-search-s')||{value:''}).value.toLowerCase();
+  const razon = (document.getElementById('oc-filter-razon-s')||{value:''}).value;
+  const docs = _allOCDocs.filter(function(d) {
+    const oc = d.data();
+    if(oc.status !== 'surtida') return false;
+    if(razon && (oc.razon||'').toUpperCase().indexOf(razon.toUpperCase()) < 0) return false;
+    if(q) {
+      const searchStr = (oc.numero||'') + ' ' + (oc.razon||'') + ' ' + (oc.comprador||'');
+      if(searchStr.toLowerCase().indexOf(q) < 0) return false;
+    }
+    return true;
+  });
+  renderOCList(docs, 'ocs-surtida-list', 'surtida');
+}
+
+function renderOCList(docs, containerId, tipo) {
+  const el = document.getElementById(containerId);
+  el.innerHTML = '';
+  if(!docs.length) {
+    el.innerHTML = '<div class="empty"><div class="empty-icon">📦</div>Sin OCs '+(tipo==='pendiente'?'pendientes':'surtidas')+'</div>';
+    return;
+  }
+  docs.forEach(function(d) {
+    const oc = d.data();
+    const dias = oc.fecha ? Math.floor((new Date()-new Date(oc.fecha))/86400000) : 0;
+    const diasBadge = dias > 30 ? '<span class="badge badge-danger">'+dias+'d</span>' : dias > 15 ? '<span class="badge badge-warn">'+dias+'d</span>' : '<span class="badge badge-info">'+dias+'d</span>';
+    const tipoBadge = getTipoOC(oc) === 'servicio' ? '<span class="badge badge-gray">Servicio</span>' : '<span class="badge badge-info">Producto</span>';
+    const div = document.createElement('div');
+    div.className = 'item-row';
+    div.innerHTML =
+      '<div class="item-top">' +
+        '<span class="item-name">📦 ' + (oc.numero||'OC') + '</span>' +
+        '<span class="item-amount">' + fmt(oc.totalOC) + '</span>' +
+      '</div>' +
+      '<div class="item-meta">' + (oc.razon||'CIVE') + ' · ' + (oc.fecha||'') + ' · ' + (oc.articulos?oc.articulos.length:0) + ' art. ' + diasBadge + ' ' + tipoBadge + '</div>';
+    div.addEventListener('click', function(){ verOC(d.id); });
+    el.appendChild(div);
+  });
+}
+
+async function verOC(id) {
+  // Use cached docs first, fall back to fetch
+  var docRef = _allOCDocs.find(function(d){ return d.id === id; });
+  if(!docRef) {
+    const snap = await firebase.getDocs(firebase.collection(db,'ocs'));
+    docRef = snap.docs.find(function(d){ return d.id === id; });
+  }
+  if(!docRef) return;
+  const oc = docRef.data();
+  document.getElementById('ocModal-title').textContent = oc.numero || 'Detalle OC';
+  const statusBadge = oc.status==='surtida'?'success':'info';
+  const artRows = oc.articulos && oc.articulos.length ? oc.articulos.map(function(a){
+    return '<div class="item-row" style="margin-bottom:4px;padding:.5rem .75rem">' +
+      '<div class="item-top"><span class="item-name" style="font-size:12px">'+(a.codigo?'['+a.codigo+'] ':'')+a.desc+'</span><span class="item-amount" style="font-size:12px">'+fmt(a.subtotal||a.pu*a.cant)+'</span></div>' +
+      '<div class="item-meta">'+a.cant+' '+a.unidad+' × '+fmt(a.pu)+'</div>' +
+      '</div>';
+  }).join('') : '<div class="empty" style="padding:.75rem">Sin artículos registrados</div>';
+  var modalHtml =
+    '<div class="fin-row"><span class="fin-lbl">No. OC</span><span class="fin-val fw-600 text-navy">'+(oc.numero||'')+'</span></div>' +
+    (oc.requisicion ? '<div class="fin-row"><span class="fin-lbl">Requisición</span><span class="fin-val">'+(oc.requisicion||'')+'</span></div>' : '') +
+    '<div class="fin-row"><span class="fin-lbl">Razón social</span><span class="fin-val">'+(oc.razon||'CIVE')+'</span></div>' +
+    (oc.comprador ? '<div class="fin-row"><span class="fin-lbl">Comprador</span><span class="fin-val">'+(oc.comprador||'')+'</span></div>' : '') +
+    '<div class="fin-row"><span class="fin-lbl">Fecha OC</span><span class="fin-val">'+(oc.fecha||'')+'</span></div>' +
+    '<div class="fin-row"><span class="fin-lbl">Condición pago</span><span class="fin-val">'+(oc.credito||'CRÉDITO 15 DÍAS')+'</span></div>' +
+    '<div class="fin-row"><span class="fin-lbl">Subtotal s/IVA</span><span class="fin-val">'+fmt(oc.subtotalOC||oc.totalOC/1.16)+'</span></div>' +
+    '<div class="fin-row"><span class="fin-lbl">Total c/IVA</span><span class="fin-val fw-600">'+fmt(oc.totalOC)+'</span></div>' +
+    '<div class="fin-row"><span class="fin-lbl">Tipo</span><span class="fin-val"><span class="badge badge-'+(getTipoOC(oc)==='servicio'?'gray':'info')+'">'+(getTipoOC(oc)==='servicio'?'Servicio':'Producto')+'</span></span></div>' +
+    '<div class="fin-row"><span class="fin-lbl">Status</span><span class="fin-val"><span class="badge badge-'+statusBadge+'">'+(oc.status||'pendiente')+'</span></span></div>' +
+    '<div class="divider"></div>' +
+    '<div style="font-size:11px;font-weight:700;color:var(--text-3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px">Artículos</div>' +
+    artRows;
+  document.getElementById('ocModal-body').innerHTML = modalHtml;
+  const btn = document.getElementById('ocModal-action');
+  if(oc.status === 'surtida') { btn.textContent='Marcar pendiente'; btn.onclick=()=>cambiarStatusOC(id,'pendiente'); }
+  else { btn.textContent='Marcar surtida'; btn.onclick=()=>cambiarStatusOC(id,'surtida'); }
+  openModal('ocModal');
+}
+
+async function cambiarStatusOC(id, status) {
+  await firebase.updateDoc(firebase.doc(db,'ocs',id), { status });
+  closeModal('ocModal');
+  loadOCs(); loadDashboard();
+}
+
+// ── CAPTURAR OC ──
+function procesarOC() {
+  const texto = document.getElementById('oc-texto').value.trim();
+  if(!texto) { alert('Pega el texto de la OC primero'); return; }
+
+  const lines = texto.split('\n').map(function(l){ return l.trim(); }).filter(Boolean);
+  var numero='', fecha='', razon='', articulos=[], totalOC=0, subtotalOC=0, requisicion='';
+
+  // Join all text for global searches
+  var fullText = lines.join(' ');
+
+  // DEBUG - remove after testing
+
+  // OC number
+  var ocMatch = fullText.match(/OC(\d+)/i);
+  if(ocMatch) numero = 'OC'+ocMatch[1];
+
+  // Requisicion
+  var reqMatch = fullText.match(/Requisicion[:\s]+(\d+)/i);
+  if(reqMatch) requisicion = reqMatch[1];
+
+  // Date
+  var dateMatch = fullText.match(/(\d{2}\/(?:ene|feb|mar|abr|may|jun|jul|ago|sep|oct|nov|dic|\d{2})\.\/\d{4}|\d{2}\/\d{2}\/\d{4})/i);
+  if(dateMatch) fecha = dateMatch[1];
+
+  // Razon social
+  var razonPatterns = ['SAN ANTONIO AGRICULTURA MODERNA','AGRICOLA CIVE','AGRICOLA ZARATTINI','AGRICOLA ZARATTIN','PEBBLE PEPPERS','COMERCIALIZADORA AGRESTE'];
+  for(var rp=0; rp<razonPatterns.length; rp++) {
+    if(fullText.toUpperCase().indexOf(razonPatterns[rp]) >= 0) { razon=razonPatterns[rp]; break; }
+  }
+
+  // Extract Total (with IVA) — look for "Total $X" but NOT "Total Descuento"
+  // Extract total - find 'Total' followed by a number, not Descuento
+  var totSearch = fullText;
+  var totIdx = -1, totVal = 0;
+  var totRe = /Total\s*\$?\s*([\d,]+\.\d{2})/gi;
+  var totM;
+  while((totM = totRe.exec(totSearch)) !== null) {
+    var before = totSearch.substring(Math.max(0,totM.index-5), totM.index+40);
+    if(before.toLowerCase().indexOf('descuento') >= 0) continue;
+    totVal = parseFloat(totM[1].replace(/,/g,''));
+  }
+  if(totVal > 0) totalOC = totVal;
+
+  // Extract SubTotal (without IVA)
+  // Extract subtotal - handles both 'SubTotal' and 'Sub Total'
+  var subSearch = fullText.replace(/Sub\s+Total/gi, 'SubTotal');
+  var subIdx = subSearch.search(/SubTotal/i);
+  if(subIdx >= 0) {
+    var subAfter = subSearch.substring(subIdx + 8, subIdx + 60);
+    var subNum = subAfter.match(/([\d,]+\.\d{2})/);
+    if(subNum) subtotalOC = parseFloat(subNum[1].replace(/,/g,''));
+  }
+
+  // If no total found, use subtotal + 16%
+  if(!totalOC && subtotalOC) totalOC = Math.round(subtotalOC * 1.16 * 100) / 100;
+
+  // combinedLines not needed - new parser handles multi-line directly
+  // Strategy: find UNIT+QTY+PRICE lines and work backwards for description
+  var unitPriceRx = /^(KIT|PZ|KG|LT|MT|PIEZA|SERV|HRS?)\s+([\d.]+)\s+([\d,]+\.?\d*)\s+\d+%\s+([\d,]+\.\d{2})\s*$/i;
+  var codeRx = /^(\d{5,8}|[A-Z]{2,5}\d{3,}|[A-Z0-9]{5,10})\s+(.+)$/;
+  var skipRx = /^(SubTotal|Total|IVA|TRAMITO|AUTORIZA|FORMA|METODO|USO|SERIE|CU\d|\(|Orden|Folio|Proveedor|Entrega|Artículo|RFC|GUANAJUATO|SAN LUIS|CL |CM |ESTEFANI|VEHICULOS|CREDITO|CAPITAL|TALLER|SAAM|NOMBRE)/i;
+
+  for(var j=0; j<lines.length; j++) {
+    var l = lines[j];
+    var um = l.match(unitPriceRx);
+    if(um) {
+      // Found unit/price line — look back for code and description
+      var codigo = '', desc = '', descParts = [];
+      // First pass: look for 6-digit numeric code (most reliable)
+      for(var k = j-1; k >= Math.max(0, j-8); k--) {
+        var prevLine = lines[k];
+        if(skipRx.test(prevLine)) break;
+        var cm6 = prevLine.match(/^(\d{6})\s+(.+)/);
+        if(cm6) { codigo = cm6[1]; break; }
+      }
+      // Build description from lines between code and unit/price
+      var startK = j-1;
+      if(codigo) {
+        for(var k = j-1; k >= Math.max(0, j-8); k--) {
+          var prevLine = lines[k];
+          if(skipRx.test(prevLine)) break;
+          if(prevLine.match(/^\d{6}\s+/)) {
+            descParts.unshift(prevLine.replace(/^\d{6}\s+/, '').trim());
+            break;
+          } else if(prevLine.length > 2) {
+            descParts.unshift(prevLine);
+          }
+        }
+      } else {
+        // Fallback: any alphanumeric code
+        for(var k = j-1; k >= Math.max(0, j-5); k--) {
+          var prevLine = lines[k];
+          if(skipRx.test(prevLine)) break;
+          var cmAny = prevLine.match(/^([A-Z0-9]{4,10})\s+(.+)/);
+          if(cmAny) { codigo = cmAny[1]; descParts.unshift(cmAny[2].trim()); break; }
+          else if(prevLine.length > 2) { descParts.unshift(prevLine); }
+        }
+      }
+      desc = descParts.join(' ').trim();
+      if(!desc) desc = 'Ver OC original';
+      var pu = parseFloat(um[3].replace(/,/g,''));
+      var sub = parseFloat(um[4].replace(/,/g,''));
+      if(pu > 0) {
+        articulos.push({ codigo:codigo, desc:desc, unidad:um[1].toUpperCase(), cant:parseFloat(um[2]), pu:pu, subtotal:sub });
+      }
+      continue;
+    }
+    // Also try single-line pattern: CODE DESC UNIT QTY PRICE DISCOUNT SUBTOTAL
+    var m = l.match(/^([A-Z0-9]{3,10})\s+(.+?)\s+(KIT|SERV|PZ|KG|LT|MT|PIEZA|HRS?)\s+([\d.]+)\s+([\d,]+\.\d{2})\s+(?:[\d,]+\.\d{2}\s+)?(?:\d+%\s+)?([\d,]+\.\d{2})\s*$/i);
+    if(m && !skipRx.test(l)) {
+      var pu2 = parseFloat(m[5].replace(/,/g,''));
+      var sub2 = parseFloat(m[6].replace(/,/g,''));
+      if(pu2 > 0) {
+        articulos.push({ codigo:m[1], desc:m[2].trim(), unidad:m[3].toUpperCase(), cant:parseFloat(m[4]), pu:pu2, subtotal:sub2 });
+      }
+    }
+  }
+
+  // If line-by-line failed, try fullText regex (handles PDF.js single-line output)
+  if(articulos.length === 0) {
+    // Format: CODE(6digits) DESC UNIT DISCOUNT% QTY PRICE SUBTOTAL
+    var parts = fullText.match(/(\d{6})\s+([\w\s\/\.\-\(\)]+?)\s+(KIT|PZ|KG|LT|MT|PIEZA|SERV|HRS?)\s+\d+%\s+([\d.]+)\s+([\d,]+\.?\d*)\s+([\d,]+\.\d{2})/gi);
+    if(parts) {
+      // Re-run to get groups
+      var rxSingle = /(\d{6})\s+([\w\s\/\.\-\(\)]+?)\s+(KIT|PZ|KG|LT|MT|PIEZA|SERV|HRS?)\s+\d+%\s+([\d.]+)\s+([\d,]+\.?\d*)\s+([\d,]+\.\d{2})/gi;
+      var am;
+      while((am = rxSingle.exec(fullText)) !== null) {
+        var puX = parseFloat(am[5].replace(/,/g,''));
+        var subX = parseFloat(am[6].replace(/,/g,''));
+        if(puX > 0) {
+          articulos.push({ codigo:am[1], desc:(function(d){ var h=d.trim().replace(/\s+/g,' '); var words=h.split(' '); var half=Math.floor(words.length/2); if(half>2 && words.slice(0,half).join(' ')===words.slice(half).join(' ')) return words.slice(0,half).join(' '); return h; })(am[2]), unidad:am[3].toUpperCase(), cant:parseFloat(am[4]), pu:puX, subtotal:subX });
+        }
+      }
+    }
+  }
+
+    // If no articles found, create one from subtotal (price WITHOUT IVA since we store pre-tax prices)
+  if(articulos.length === 0 && subtotalOC > 0) {
+    articulos.push({ codigo:'SERV', desc:'Servicio (ver OC original)', unidad:'SERV', cant:1, pu:subtotalOC, subtotal:subtotalOC });
+  } else if(articulos.length === 0 && totalOC > 0) {
+    var subSinIVA = Math.round(totalOC/1.16*100)/100;
+    articulos.push({ codigo:'SERV', desc:'Servicio (ver OC original)', unidad:'SERV', cant:1, pu:subSinIVA, subtotal:subSinIVA });
+  }
+
+  numero = numero || (requisicion ? ('OC' + requisicion) : ('OC' + Date.now()));
+
+  var artPreview = articulos.length ?
+    '<div class="divider"></div>' + articulos.map(function(a){ return '<div class="fin-row"><span class="fin-lbl">'+a.desc+'</span><span class="fin-val">'+a.cant+' x $'+a.pu.toLocaleString('es-MX')+'</span></div>'; }).join('') :
+    '<div class="alert alert-warn mt-1">No se detectaron artículos.</div>';
+
+  var preview = document.getElementById('oc-preview');
+  preview.classList.remove('hidden');
+  preview.innerHTML =
+    '<div class="card">' +
+    '<div class="card-title">Vista previa — confirma antes de guardar</div>' +
+    '<div class="fin-row"><span class="fin-lbl">Número</span><span class="fin-val">'+numero+'</span></div>' +
+    '<div class="fin-row"><span class="fin-lbl">Requisición</span><span class="fin-val">'+(requisicion||'')+'</span></div>' +
+    '<div class="fin-row"><span class="fin-lbl">Fecha</span><span class="fin-val">'+fecha+'</span></div>' +
+    '<div class="fin-row"><span class="fin-lbl">Cliente</span><span class="fin-val">'+(razon||'Por confirmar')+'</span></div>' +
+    '<div class="fin-row"><span class="fin-lbl">Subtotal s/IVA</span><span class="fin-val">$'+subtotalOC.toLocaleString('es-MX')+'</span></div>' +
+    '<div class="fin-row"><span class="fin-lbl">Total c/IVA</span><span class="fin-val">$'+totalOC.toLocaleString('es-MX')+'</span></div>' +
+    '<div class="fin-row"><span class="fin-lbl">Artículos</span><span class="fin-val">'+articulos.length+' detectados</span></div>' +
+    artPreview +
+    '<div class="modal-actions mt-1">' +
+    '<button class="btn-cancel" onclick="cancelOCPreview()">Cancelar</button>' +
+    '<button class="btn-save" onclick="guardarOCPendiente()">Guardar OC</button>' +
+    '</div></div>';
+
+  window._ocPendiente = {numero:numero, fecha:fecha, razon:razon, articulos:articulos, totalOC:totalOC, subtotalOC:subtotalOC, requisicion:requisicion};
+}
+
+async function guardarOCPendiente() {
+  if(window._ocPendiente) await guardarOC(window._ocPendiente);
+}
+
+async function guardarOC(data) {
+  // Upload PDF if present
+  if(window._pendingPDFFile) {
+    try {
+      const pdfFile = window._pendingPDFFile;
+      const storageRef = window._firebase.ref(window._storage, 'ocs/' + (data.numero||'OC') + '_' + Date.now() + '.pdf');
+      const pdfSnap = await window._firebase.uploadBytes(storageRef, pdfFile);
+      const pdfUrl = await window._firebase.getDownloadURL(pdfSnap.ref);
+      data.pdfUrl = pdfUrl;
+      data.pdfNombre = pdfFile.name;
+      window._pendingPDFFile = null;
+    } catch(pdfErr) { console.error('PDF upload error:', pdfErr); }
+  }
+  try {
+    // Check duplicates in ocs collection (all statuses)
+    const snapOC = await firebase.getDocs(firebase.query(
+      firebase.collection(db,'ocs'),
+      firebase.where('numero','==',data.numero)
+    ));
+    // Also check in facturas by OC reference
+    const snapFac = await firebase.getDocs(firebase.query(
+      firebase.collection(db,'facturas'),
+      firebase.where('oc','==',data.numero)
+    ));
+    // Also check by requisicion number
+    const snapReq = data.requisicion ? await firebase.getDocs(firebase.query(
+      firebase.collection(db,'ocs'),
+      firebase.where('requisicion','==',data.requisicion)
+    )) : {empty:true};
+
+    if(!snapOC.empty || !snapFac.empty || !snapReq.empty) {
+      var msg = 'Ya existe un registro con este número:\n\n';
+      if(!snapOC.empty) { var ex=snapOC.docs[0].data(); msg += '📦 OC: '+ex.numero+' ('+ex.status+') — '+ex.fecha+'\n'; }
+      if(!snapFac.empty) { var ex2=snapFac.docs[0].data(); msg += '📄 Factura: '+ex2.folio+' ('+ex2.status+') — '+ex2.fecha+'\n'; }
+      if(!snapReq.empty && snapReq.docs) { var ex3=snapReq.docs[0].data(); msg += '📋 Requisición: '+ex3.numero+' ('+ex3.status+')\n'; }
+      msg += '\n¿Guardar de todas formas?';
+      const ok = window.confirm(msg);
+      if(!ok) return;
+    }
+    await firebase.addDoc(firebase.collection(db,'ocs'), { ...data, status:'pendiente', createdAt: new Date().toISOString() });
+    document.getElementById('oc-texto').value = '';
+    document.getElementById('oc-preview').classList.add('hidden');
+    alert('✅ OC guardada correctamente');
+    loadOCs(); loadDashboard();
+    setOCTab('pendiente', document.querySelector('#page-ocs .tab-btn'));
+  } catch(e) { alert('Error al guardar: '+e.message); }
+}
+
+
+// ── ESTADO DE CUENTA ──
+async function loadEstado() {
+  try {
+    const [facSnap, speiSnap] = await Promise.all([
+      firebase.getDocs(firebase.query(firebase.collection(db,'facturas'), firebase.orderBy('fecha','desc'))),
+      firebase.getDocs(firebase.query(firebase.collection(db,'speis'), firebase.orderBy('fecha','desc')))
+    ]);
+
+    const hoy = new Date();
+    _allFacDocs = facSnap.docs;
+    filtrarFacturas();
+
+    const speiHtml = speiSnap.docs.length ? speiSnap.docs.map(d => {
+      const s = d.data();
+      return '<div class="item-row">' +
+        '<div class="item-top"><span class="item-name">💳 ' + (s.numero||'SPEI') + '</span><span class="item-amount text-success">' + fmt(s.monto) + '</span></div>' +
+        '<div class="item-meta">' + (s.ordenante||'') + ' · ' + (s.fecha||'') + '</div>' +
+        (s.relacion ? '<div class="item-meta mt-1">Facturas: ' + s.relacion + '</div>' : '') +
+        '</div>';
+    }).join('') : '<div class="empty"><div class="empty-icon">💳</div>Sin pagos registrados</div>';
+    document.getElementById('spei-list').innerHTML = speiHtml;
+
+  } catch(e) { console.error(e); }
+}
+
+async function guardarFactura() {
+  const tipoPago = document.getElementById('f-tipo-pago').value;
+  const data = {
+    folio: document.getElementById('f-folio').value.trim(),
+    fecha: document.getElementById('f-fecha').value,
+    oc: document.getElementById('f-oc').value.trim(),
+    subtotal: parseFloat(document.getElementById('f-sub').value)||0,
+    total: parseFloat(document.getElementById('f-total').value)||0,
+    razon: document.getElementById('f-razon').value,
+    tipoPago: tipoPago || 'pendiente',
+    status: tipoPago ? 'pagada' : 'pendiente',
+    fechaPago: tipoPago ? document.getElementById('f-fecha').value : null,
+    createdAt: new Date().toISOString()
+  };
+  if(!data.folio || !data.total) { alert('Completa folio y total'); return; }
+  try {
+    // Check for duplicates
+    const snap = await firebase.getDocs(firebase.query(
+      firebase.collection(db,'facturas'),
+      firebase.where('folio','==',data.folio)
+    ));
+    if(!snap.empty) {
+      const existing = snap.docs[0].data();
+      const confirm = window.confirm(
+        '⚠️ Ya existe una factura con el folio ' + data.folio + '\n' +
+        'Fecha: ' + existing.fecha + ' · Total: ' + fmt(existing.total) + ' · Status: ' + existing.status + '\n\n' +
+        '¿Deseas guardarla de todas formas?'
+      );
+      if(!confirm) return;
+    }
+    await firebase.addDoc(firebase.collection(db,'facturas'), data);
+    alert('✅ Factura registrada'); loadEstado(); loadDashboard();
+    ['f-folio','f-oc','f-sub','f-total'].forEach(id => document.getElementById(id).value='');
+  } catch(e) { alert('Error: '+e.message); }
+}
+
+async function guardarSPEI() {
+  const numero = document.getElementById('sp-num').value.trim();
+  const fecha = document.getElementById('sp-fecha').value;
+  const monto = parseFloat(document.getElementById('sp-monto').value)||0;
+  const ordenante = document.getElementById('sp-ordenante').value.trim();
+
+  // Validation
+  const errs = [];
+  if(!numero) errs.push('No. SPEI / Clave de rastreo');
+  if(numero && numero.length < 6) errs.push('El número SPEI debe tener al menos 6 caracteres');
+  if(!fecha) errs.push('Fecha del pago');
+  if(!monto || monto <= 0) errs.push('Monto mayor a $0');
+  if(!ordenante) errs.push('Nombre del ordenante');
+  if(errs.length) { alert('Faltan datos requeridos:\n• ' + errs.join('\n• ')); return; }
+
+  const data = {
+    numero: numero,
+    fecha: fecha,
+    monto: monto,
+    ordenante: ordenante,
+    relacion: document.getElementById('sp-relacion').value.trim(),
+    createdAt: new Date().toISOString()
+  };
+  try {
+    // Check for duplicate SPEI
+    const snap = await firebase.getDocs(firebase.query(
+      firebase.collection(db,'speis'),
+      firebase.where('numero','==',data.numero)
+    ));
+    if(!snap.empty) {
+      const existing = snap.docs[0].data();
+      const confirm = window.confirm(
+        '⚠️ Ya existe un SPEI con el número ' + data.numero + '\n' +
+        'Fecha: ' + existing.fecha + ' · Monto: ' + fmt(existing.monto) + '\n\n' +
+        '¿Deseas guardarlo de todas formas?'
+      );
+      if(!confirm) return;
+    }
+    await firebase.addDoc(firebase.collection(db,'speis'), data);
+    // Auto-apply to facturas if relacion provided
+    if(data.relacion) {
+      const lines = data.relacion.split('\n').map(function(l){ return l.trim(); }).filter(Boolean);
+      // Lines alternate: folio_suffix, amount (or just folio_suffix)
+      // Extract just the folio suffixes (non-numeric or short numbers that are folios)
+      // Format: odd lines = folio suffix, even lines = amount
+      const cleanLines = lines.map(function(l){ return l.replace(/[,$\s]/g,''); }).filter(Boolean);
+      const pares = []; // [{sufijo, monto}]
+      for(var li=0; li<cleanLines.length; li+=2) {
+        const sufijo = cleanLines[li];
+        const monto = cleanLines[li+1] ? parseFloat(cleanLines[li+1]) : null;
+        if(sufijo) pares.push({sufijo:sufijo, monto:monto});
+      }
+      const sufijos = pares.map(function(p){ return p.sufijo; });
+      if(sufijos.length > 0) {
+        // Get all pending facturas
+        // Get all non-paid facturas (pending, abono, or no status)
+        const facSnap = await firebase.getDocs(firebase.collection(db,'facturas'));
+        let applied = 0;
+        const warnings = [];
+        for(const facDoc of facSnap.docs) {
+          const fac = facDoc.data();
+          const folio = (fac.folio||'').toString();
+          // Check if any suffix matches the end of this folio
+          // Extract only digits from UUID folio for matching
+          const folioDigits = folio.replace(/[^0-9]/g, '');
+          const matchPar = pares.find(function(p){ 
+            return folioDigits.endsWith(p.sufijo) || folio.endsWith(p.sufijo) || folio === p.sufijo;
+          });
+          if(matchPar) {
+            const facTotal = parseFloat((fac.total||0).toString().replace(/[,$]/g,''));
+            const montoPago = matchPar.monto || facTotal;
+            const diff = Math.abs(facTotal - montoPago);
+            const esPagoParcial = diff > 1 && montoPago < facTotal;
+            const esSobrepago = diff > 1 && montoPago > facTotal;
+
+            if(diff < 1) {
+              // Pago exacto
+              await firebase.updateDoc(firebase.doc(db,'facturas',facDoc.id), {
+                status: 'pagada',
+                spei: data.numero,
+                fechaPago: data.fecha
+              });
+              applied++;
+            } else if(esPagoParcial) {
+              // Pago parcial — solicitar confirmación
+              const saldoPendiente = Math.round((facTotal - montoPago)*100)/100;
+              const okParcial = window.confirm(
+                '⚠️ ABONO PARCIAL detectado\n\n' +
+                'Factura: ' + fac.folio + '\n' +
+                'Total factura: $' + facTotal.toLocaleString('es-MX') + '\n' +
+                'Monto en relación: $' + montoPago.toLocaleString('es-MX') + '\n' +
+                'Saldo pendiente: $' + saldoPendiente.toLocaleString('es-MX') + '\n\n' +
+                '¿Registrar como abono parcial?'
+              );
+              if(okParcial) {
+                await firebase.updateDoc(firebase.doc(db,'facturas',facDoc.id), {
+                  status: 'abono',
+                  spei: data.numero,
+                  fechaAbono: data.fecha,
+                  montoAbono: montoPago,
+                  saldoPendiente: saldoPendiente
+                });
+                applied++;
+                warnings.push('✅ Abono registrado en ' + fac.folio + ' — saldo pendiente: $' + saldoPendiente.toLocaleString('es-MX'));
+              } else {
+                warnings.push('⏭️ Omitido: ' + fac.folio + ' (abono parcial no confirmado)');
+              }
+            } else if(esSobrepago) {
+              // Sobrepago — solicitar confirmación
+              const difSobre = Math.round((montoPago-facTotal)*100)/100;
+              const okSobre = window.confirm(
+                '⚠️ SOBREPAGO detectado\n\n' +
+                'Factura: ' + fac.folio + '\n' +
+                'Total factura: $' + facTotal.toLocaleString('es-MX') + '\n' +
+                'Monto en relación: $' + montoPago.toLocaleString('es-MX') + '\n' +
+                'Diferencia a tu favor: $' + difSobre.toLocaleString('es-MX') + '\n\n' +
+                '¿Marcar como pagada con diferencia?'
+              );
+              if(okSobre) {
+                await firebase.updateDoc(firebase.doc(db,'facturas',facDoc.id), {
+                  status: 'pagada',
+                  spei: data.numero,
+                  fechaPago: data.fecha,
+                  sobrepago: difSobre
+                });
+                applied++;
+                warnings.push('✅ Pagada con sobrepago en ' + fac.folio + ' — diferencia: $' + difSobre.toLocaleString('es-MX'));
+              } else {
+                warnings.push('⏭️ Omitido: ' + fac.folio + ' (sobrepago no confirmado)');
+              }
+            }
+          }
+        }
+        if(applied > 0) {
+          var msg = '✅ Pago SPEI registrado\n' + applied + ' factura(s) procesadas.';
+          if(warnings.length > 0) msg += '\n\n' + warnings.join('\n');
+          alert(msg);
+        } else {
+          alert('✅ Pago SPEI registrado\n⚠️ No se encontraron facturas que coincidan con la relación. Verifica manualmente.');
+        }
+      } else {
+        alert('✅ Pago SPEI registrado');
+      }
+    } else {
+      alert('✅ Pago SPEI registrado');
+    }
+    loadEstado(); loadDashboard();
+    ['sp-num','sp-monto','sp-ordenante','sp-relacion'].forEach(id => document.getElementById(id).value='');
+  } catch(e) { alert('Error: '+e.message); }
+}
+
+// ── FINANZAS ──
+function calcFinanzas() {
+  const gas = parseFloat(document.getElementById('fin-gas').value)||28.5;
+  const kmE = parseFloat(document.getElementById('fin-km-e').value)||200;
+  const kmC = parseFloat(document.getElementById('fin-km-c').value)||280;
+  const seguro = parseFloat(document.getElementById('fin-seguro').value)||1500;
+  const mant = parseFloat(document.getElementById('fin-mant').value)||800;
+  const ram = parseFloat(document.getElementById('fin-ram').value)||315000;
+  const vida = parseFloat(document.getElementById('fin-vida').value)||5;
+  const sueldo = parseFloat(document.getElementById('fin-sueldo').value)||15000;
+  const ocs = parseFloat(document.getElementById('fin-ocs').value)||8;
+
+  const rendimiento = 10;
+  const litros = (kmE+kmC)/rendimiento;
+  const costoGas = litros*gas;
+  const depreciacion = ram/(vida*12);
+  const totalRam = costoGas+seguro+mant+depreciacion;
+  const costoXoc = totalRam/ocs;
+  const totalMensual = totalRam+sueldo;
+
+  const facMin = Math.round(totalMensual/0.27*100)/100;
+  const facIdeal = Math.round(totalMensual/0.40*100)/100;
+  const rows = [
+    ['── COSTOS OPERATIVOS ──', '',''],
+    ['Gasolina mensual', fmt(costoGas),''],
+    ['Depreciación RAM', fmt(depreciacion),''],
+    ['Seguro mensual', fmt(seguro),''],
+    ['Mantenimiento', fmt(mant),''],
+    ['Total costos RAM', fmt(totalRam),'warn'],
+    ['── RESUMEN ──', '',''],
+    ['Sueldo objetivo', fmt(sueldo),''],
+    ['Utilidad mínima requerida', fmt(totalMensual),'negative'],
+    ['Costo por OC', fmt(costoXoc),''],
+    ['── FACTURACIÓN NECESARIA ──', '',''],
+    ['Con margen 27% necesitas facturar', fmt(facMin),''],
+    ['Con margen 40% necesitas facturar', fmt(facIdeal),'positive'],
+    ['Diferencia (ahorro con mejor margen)', fmt(facMin-facIdeal),'warn'],
+  ];
+
+  document.getElementById('fin-rows').innerHTML = rows.map(function(r){ return '<div class="fin-row"><span class="fin-lbl">'+r[0]+'</span><span class="fin-val '+(r[2]||'')+'">' +r[1]+'</span></div>'; }).join('');
+  document.getElementById('fin-resultados').classList.remove('hidden');
+
+  // Save to firestore
+  firebase.addDoc(firebase.collection(db,'finanzas'), { gas,kmE,kmC,seguro,mant,ram,vida,sueldo,ocs,totalMensual,costoXoc,fecha:today() }).catch(()=>{});
+  // Save to localStorage for persistence
+  try { localStorage.setItem('vt_finanzas', JSON.stringify({gas,kmE,kmC,seguro,mant,ram,vida,sueldo,ocs})); } catch(e){}
+}
+
+async function guardarMeta() {
+  const meta = parseFloat(document.getElementById('fin-meta').value)||0;
+  if(!meta) return;
+  await firebase.addDoc(firebase.collection(db,'metas'), { meta, fecha: today() }).catch(()=>{});
+  document.getElementById('fin-meta-res').innerHTML = '<div class="alert alert-success mt-1">Meta de '+fmt(meta)+'/mes guardada ✓</div>';
+}
+
+// ── RESUMEN ──
+async function loadResumen() {
+  try {
+    const [facSnap, speiSnap, ocSnap] = await Promise.all([
+      firebase.getDocs(firebase.collection(db,'facturas')),
+      firebase.getDocs(firebase.collection(db,'speis')),
+      firebase.getDocs(firebase.collection(db,'ocs'))
+    ]);
+    const hoy = new Date();
+    let pendiente=0, vencido=0, cobrado=0, n_fac=0;
+    facSnap.docs.forEach(d => {
+      const f=d.data(); const total=Number(f.total)||0;
+      if(f.status!=='pagada') { pendiente+=total; n_fac++; const dias=f.fecha?Math.floor((hoy-new Date(f.fecha))/86400000):0; if(dias>15)vencido+=total; }
+    });
+    speiSnap.docs.forEach(d => { cobrado+=Number(d.data().monto)||0; });
+    const ocsP = ocSnap.docs.filter(d=>d.data().status!=='surtida').length;
+
+    document.getElementById('resumen-datos').innerHTML =
+      '<div class="fin-row"><span class="fin-lbl">Facturas pendientes</span><span class="fin-val">'+n_fac+' · '+fmt(pendiente)+'</span></div>' +
+      '<div class="fin-row"><span class="fin-lbl">Cartera vencida</span><span class="fin-val negative">'+fmt(vencido)+'</span></div>' +
+      '<div class="fin-row"><span class="fin-lbl">Total cobrado (SPEIs)</span><span class="fin-val positive">'+fmt(cobrado)+'</span></div>' +
+      '<div class="fin-row"><span class="fin-lbl">OCs por surtir</span><span class="fin-val">'+ocsP+'</span></div>' +
+      '<div class="fin-row"><span class="fin-lbl">Actualizado</span><span class="fin-val">'+hoy.toLocaleDateString('es-MX')+'</span></div>';
+  } catch(e) { document.getElementById('resumen-datos').innerHTML='<div class="empty">Error al cargar</div>'; }
+}
+
+function exportarResumen() {
+  const el = document.getElementById('resumen-datos');
+  const texto = `COMERCIALIZADORA VILLATORO\nResumen de Estado de Cuenta\n${new Date().toLocaleDateString('es-MX')}\n\n` +
+    el.innerText.replace(/\n\n/g,'\n');
+  if(navigator.share) navigator.share({title:'Resumen Villatoro', text:texto});
+  else { navigator.clipboard.writeText(texto).then(()=>alert('Resumen copiado al portapapeles')); }
+}
+
+// ── BUSCADOR FACTURAS ──
+var _allFacDocs = [];
+
+function filtrarFacturas() {
+  const q = (document.getElementById('fac-search')||{value:''}).value.toLowerCase();
+  const status = (document.getElementById('fac-filter-status')||{value:''}).value;
+  const razon = (document.getElementById('fac-filter-razon')||{value:''}).value;
+  const hoy = new Date();
+  const docs = _allFacDocs.filter(function(d) {
+    const f = d.data();
+    if(status && f.status !== status) return false;
+    if(razon && (f.razon||'').toUpperCase().indexOf(razon.toUpperCase()) < 0) return false;
+    if(q) {
+      const s = (f.folio||'')+' '+(f.oc||'')+' '+(f.razon||'')+' '+(f.total||'');
+      if(s.toLowerCase().indexOf(q) < 0) return false;
+    }
+    return true;
+  });
+  renderFacturasList(docs, hoy);
+}
+
+function renderFacturasList(docs, hoy) {
+  const el = document.getElementById('facturas-list');
+  if(!docs.length) { el.innerHTML = '<div class="empty">Sin facturas</div>'; return; }
+  el.innerHTML = '';
+  docs.forEach(function(d) {
+    const f = d.data();
+    const dias = f.fecha ? Math.floor((hoy-new Date(f.fecha))/86400000) : 0;
+    const badge = f.status==='pagada' ? 'success' : f.status==='abono' ? 'warn' : dias>60 ? 'danger' : dias>15 ? 'warn' : 'info';
+    const label = f.status==='pagada' ? 'Pagada' : f.status==='abono' ? 'Abono $'+(f.saldoPendiente||0).toLocaleString('es-MX') : dias>60 ? (dias+'d vencida') : dias>15 ? (dias+'d') : 'Vigente';
+    const div = document.createElement('div');
+    div.className = 'item-row';
+    div.innerHTML =
+      '<div class="item-top"><span class="item-name">📄 ' + (f.folio||'').slice(-8) + '</span><span class="item-amount">' + fmt(f.total) + '</span></div>' +
+      '<div class="item-meta">' + (f.razon||'') + ' · OC: ' + (f.oc||'—') + ' · ' + (f.fecha||'') + ' <span class="badge badge-' + badge + '">' + label + '</span></div>' +
+      (f.spei ? '<div class="item-meta" style="color:var(--success);font-size:11px">✅ SPEI: ' + f.spei + (f.fechaPago ? ' · ' + f.fechaPago : '') + '</div>' : '') +
+      (f.tipoPago && f.tipoPago !== 'pendiente' && f.tipoPago !== 'spei' ? '<div class="item-meta" style="color:var(--success);font-size:11px">✅ Pagada con: ' + f.tipoPago + (f.fechaPago ? ' · ' + f.fechaPago : '') + '</div>' : '') +
+      (f.sobrepago ? '<div class="item-meta" style="color:var(--warn);font-size:11px">⚠️ Sobrepago: $' + f.sobrepago.toLocaleString('es-MX') + '</div>' : '');
+    // Add payment button for unpaid invoices
+    if(f.status !== 'pagada') {
+      const btnPago = document.createElement('button');
+      btnPago.textContent = '💳 Registrar pago';
+      btnPago.style.cssText = 'margin-top:6px;width:100%;padding:7px;background:var(--success-bg);color:var(--success);border:1px solid var(--success);border-radius:6px;font-size:11px;font-weight:600;cursor:pointer';
+      (function(docId, facData){ btnPago.addEventListener('click', function(e){ e.stopPropagation(); abrirPagoFactura(docId, facData); }); })(d.id, f);
+      div.appendChild(btnPago);
+    }
+    el.appendChild(div);
+  });
+}
+
+// ── CONCILIACIÓN ──
+var _conciliarSPEI = null;
+var _conciliarSeleccionadas = {};
+
+async function loadConciliacion() {
+  document.getElementById('conciliar-aplicar').classList.add('hidden');
+  const speiSnap = await firebase.getDocs(firebase.collection(db,'speis'));
+  const facSnap = await firebase.getDocs(firebase.collection(db,'facturas'));
+  
+  // Find SPEIs without relacion or with unprocessed relacion
+  const speisSinRelacion = speiSnap.docs.filter(function(d) {
+    const s = d.data();
+    return !s.aplicado;
+  });
+
+  const el = document.getElementById('conciliar-spei-list');
+  if(!speisSinRelacion.length) {
+    el.innerHTML = '<div class="alert alert-success">✅ Todos los SPEIs están conciliados</div>';
+    return;
+  }
+
+  el.innerHTML = '';
+  speisSinRelacion.forEach(function(d) {
+    const s = d.data();
+    const div = document.createElement('div');
+    div.className = 'item-row';
+    const topDiv = document.createElement('div');
+    topDiv.innerHTML = '<div class="item-top"><span class="item-name">💳 ' + (s.numero||'SPEI') + '</span><span class="item-amount text-success">' + fmt(s.monto) + '</span></div>' + '<div class="item-meta">' + (s.ordenante||'') + ' · ' + (s.fecha||'') + (s.relacion ? ' · Tiene relación' : ' · Sin relación') + '</div>';
+    div.appendChild(topDiv);
+    const btn = document.createElement('button');
+    btn.textContent = 'Aplicar a facturas';
+    btn.style.cssText = 'margin-top:6px;width:100%;padding:7px;background:var(--navy);color:white;border:none;border-radius:6px;font-size:12px;cursor:pointer';
+    (function(speiId){ btn.addEventListener('click', function(){ iniciarConciliar(speiId); }); })(d.id);
+    div.appendChild(btn);
+    el.appendChild(div);
+  });
+}
+
+function iniciarConciliarBtn(btn) { iniciarConciliar(btn.getAttribute('data-id')); }
+
+async function iniciarConciliar(speiId) {
+  const speiSnap = await firebase.getDocs(firebase.collection(db,'speis'));
+  const speiDoc = speiSnap.docs.find(function(d){ return d.id === speiId; });
+  if(!speiDoc) return;
+  
+  _conciliarSPEI = {id: speiId, ...speiDoc.data()};
+  _conciliarSeleccionadas = {};
+  
+  document.getElementById('conciliar-spei-titulo').textContent = 'Aplicar SPEI ' + (_conciliarSPEI.numero||'');
+  document.getElementById('c-spei-monto').textContent = fmt(_conciliarSPEI.monto);
+  document.getElementById('c-sel-monto').textContent = fmt(0);
+  document.getElementById('c-diff-monto').textContent = fmt(_conciliarSPEI.monto);
+  document.getElementById('conciliar-aplicar').classList.remove('hidden');
+
+  // Get pending facturas
+  const facSnap = await firebase.getDocs(firebase.collection(db,'facturas'));
+  const pendientes = facSnap.docs.filter(function(d) {
+    const f = d.data();
+    return f.status === 'pendiente' || f.status === 'abono' || !f.status;
+  });
+
+  // Auto-suggest: find facturas that sum close to SPEI amount
+  const speiMonto = parseFloat(_conciliarSPEI.monto)||0;
+  var runningSum = 0;
+  const sugeridas = [];
+  // Sort by fecha (oldest first)
+  const sorted = pendientes.sort(function(a,b){ return new Date(a.data().fecha||0) - new Date(b.data().fecha||0); });
+  for(var i=0; i<sorted.length; i++) {
+    const total = parseFloat(sorted[i].data().total||0);
+    if(runningSum + total <= speiMonto + 1) {
+      runningSum += total;
+      sugeridas.push(sorted[i].id);
+    }
+    if(runningSum >= speiMonto - 1) break;
+  }
+
+  // Show suggestion
+  const sugEl = document.getElementById('conciliar-sugerencias');
+  if(sugeridas.length > 0) {
+    sugEl.innerHTML = '<div class="alert alert-info" style="margin-bottom:.5rem">💡 Sugerencia automática: ' + sugeridas.length + ' facturas más antiguas suman ' + fmt(runningSum) + ' — seleccionadas abajo. Puedes ajustar.</div>';
+    sugeridas.forEach(function(id){ _conciliarSeleccionadas[id] = true; });
+  } else {
+    sugEl.innerHTML = '<div class="alert alert-warn" style="margin-bottom:.5rem">Sin sugerencia automática. Selecciona manualmente las facturas que cubre este pago.</div>';
+  }
+
+  // Render factura checkboxes
+  const listaEl = document.getElementById('conciliar-facturas-lista');
+  listaEl.innerHTML = '';
+  pendientes.forEach(function(d) {
+    const f = d.data();
+    const isChecked = !!_conciliarSeleccionadas[d.id];
+    const div = document.createElement('div');
+    div.className = 'item-row';
+    div.style.cssText = 'display:flex;align-items:center;gap:10px';
+    
+    const chk = document.createElement('input');
+    chk.type = 'checkbox';
+    chk.id = 'chk-' + d.id;
+    chk.checked = isChecked;
+    chk.style.cssText = 'width:18px;height:18px;flex-shrink:0';
+    chk.setAttribute('data-id', d.id);
+    chk.setAttribute('data-total', f.total||0);
+    chk.addEventListener('change', function(){
+      toggleFacConciliar(this.getAttribute('data-id'), parseFloat(this.getAttribute('data-total')));
+    });
+    
+    const info = document.createElement('div');
+    info.style.flex = '1';
+    info.innerHTML = '<div style="font-size:13px;font-weight:600">' + (f.folio||'').slice(-8) + ' — ' + fmt(f.total) + '</div>' +
+      '<div style="font-size:11px;color:var(--text-3)">' + (f.razon||'') + ' · ' + (f.fecha||'') + '</div>';
+    
+    div.appendChild(chk);
+    div.appendChild(info);
+    listaEl.appendChild(div);
+  });
+  updateConciliarTotals();
+}
+
+function toggleFacConciliar(id, total) {
+  const chk = document.getElementById('chk-'+id);
+  if(chk && chk.checked) {
+    _conciliarSeleccionadas[id] = true;
+  } else {
+    delete _conciliarSeleccionadas[id];
+  }
+  updateConciliarTotals();
+}
+
+function updateConciliarTotals() {
+  var sel = 0;
+  Object.keys(_conciliarSeleccionadas).forEach(function(id) {
+    const chk = document.getElementById('chk-'+id);
+    if(chk) {
+      // Get total from the factura
+      const label = chk.parentElement.querySelector('div div');
+      if(label) {
+        const txt = label.textContent;
+        const m = txt.match(/\$([\d,]+\.\d{2})/);
+        if(m) sel += parseFloat(m[1].replace(',',''));
+      }
+    }
+  });
+  const speiMonto = _conciliarSPEI ? parseFloat(_conciliarSPEI.monto)||0 : 0;
+  const diff = speiMonto - sel;
+  document.getElementById('c-sel-monto').textContent = fmt(sel);
+  document.getElementById('c-diff-monto').textContent = fmt(Math.abs(diff));
+  document.getElementById('c-diff-monto').style.color = Math.abs(diff) < 1 ? 'var(--success)' : diff < 0 ? 'var(--danger)' : 'var(--warn)';
+}
+
+async function aplicarConciliacion() {
+  if(!_conciliarSPEI || !Object.keys(_conciliarSeleccionadas).length) {
+    alert('Selecciona al menos una factura');
+    return;
+  }
+  const ids = Object.keys(_conciliarSeleccionadas);
+  var applied = 0;
+  for(var i=0; i<ids.length; i++) {
+    await firebase.updateDoc(firebase.doc(db,'facturas',ids[i]), {
+      status: 'pagada',
+      spei: _conciliarSPEI.numero,
+      fechaPago: _conciliarSPEI.fecha
+    });
+    applied++;
+  }
+  // Mark SPEI as applied
+  await firebase.updateDoc(firebase.doc(db,'speis',_conciliarSPEI.id), { aplicado: true });
+  alert('✅ ' + applied + ' factura(s) marcadas como pagadas con SPEI ' + _conciliarSPEI.numero);
+  _conciliarSPEI = null;
+  _conciliarSeleccionadas = {};
+  document.getElementById('conciliar-aplicar').classList.add('hidden');
+  loadConciliacion();
+  loadEstado();
+  loadDashboard();
+}
+
+function cancelarConciliar() {
+  _conciliarSPEI = null;
+  _conciliarSeleccionadas = {};
+  document.getElementById('conciliar-aplicar').classList.add('hidden');
+}
+
+// ── SEGUIMIENTO DE SURTIDO ──
+var _surtidoData = []; // [{ocId, ocNum, razon, art, status}]
+
+const SURTIDO_LABELS = {
+  'pendiente': '⏳ Pendiente cotizar',
+  'solicitado': '📋 Solicitado a proveedor',
+  'comprado': '🚚 Comprado / en camino',
+  'disponible': '📦 Disponible para entregar',
+  'entregado': '✅ Entregado'
+};
+
+async function loadSurtido() {
+  document.getElementById('surtido-list').innerHTML = '<div class="loading"><div class="spinner"></div>Cargando...</div>';
+  try {
+    const snap = await firebase.getDocs(firebase.collection(db,'ocs'));
+    _surtidoData = [];
+    snap.docs.forEach(function(d) {
+      const oc = d.data();
+      if(oc.status === 'surtida') return;
+      if(!oc.articulos || !oc.articulos.length) return;
+      oc.articulos.forEach(function(art, idx) {
+        _surtidoData.push({
+          ocId: d.id,
+          ocNum: oc.numero||'OC',
+          razon: oc.razon||'CIVE',
+          fecha: oc.fecha||'',
+          artIdx: idx,
+          desc: art.desc||'',
+          cant: art.cant||1,
+          unidad: art.unidad||'PIEZA',
+          pu: art.pu||0,
+          status: art.surtidoStatus||'pendiente'
+        });
+      });
+    });
+    filtrarSurtido();
+  } catch(e) {
+    document.getElementById('surtido-list').innerHTML = '<div class="empty">Error al cargar</div>';
+  }
+}
+
+function filtrarSurtido() {
+  const q = (document.getElementById('surtido-search')||{value:''}).value.toLowerCase();
+  const filtStatus = (document.getElementById('surtido-filter')||{value:''}).value;
+  
+  let filtered = _surtidoData.filter(function(item) {
+    if(filtStatus && (item.status||'pendiente') !== filtStatus) return false;
+    if(q && item.desc.toLowerCase().indexOf(q) < 0 && item.ocNum.toLowerCase().indexOf(q) < 0) return false;
+    return true;
+  });
+
+  // Group by OC
+  const byOC = {};
+  filtered.forEach(function(item) {
+    if(!byOC[item.ocId]) byOC[item.ocId] = {ocNum:item.ocNum, razon:item.razon, fecha:item.fecha, arts:[]};
+    byOC[item.ocId].arts.push(item);
+  });
+
+  const el = document.getElementById('surtido-list');
+  if(!Object.keys(byOC).length) {
+    el.innerHTML = '<div class="empty"><div class="empty-icon">📦</div>Sin artículos pendientes</div>';
+    return;
+  }
+
+  el.innerHTML = '';
+  Object.keys(byOC).forEach(function(ocId) {
+    const oc = byOC[ocId];
+    const card = document.createElement('div');
+    card.className = 'surtido-card';
+    
+    const pendCount = oc.arts.filter(function(a){ return a.status === 'pendiente'; }).length;
+    const dispCount = oc.arts.filter(function(a){ return a.status === 'disponible'; }).length;
+    const entCount = oc.arts.filter(function(a){ return a.status === 'entregado'; }).length;
+    const totalArts = oc.arts.length;
+    
+    const headerDiv = document.createElement('div');
+    headerDiv.className = 'surtido-oc';
+    headerDiv.innerHTML = '<span>📦 ' + oc.ocNum + ' — ' + oc.razon + '</span>' +
+      '<span style="font-size:10px;color:var(--text-3)">' + entCount + '/' + totalArts + ' entregados</span>';
+    card.appendChild(headerDiv);
+
+    // Progress bar
+    const progBar = document.createElement('div');
+    progBar.style.cssText = 'height:4px;background:var(--border);border-radius:2px;margin-bottom:.5rem';
+    const progFill = document.createElement('div');
+    progFill.style.cssText = 'height:100%;background:var(--success);border-radius:2px;width:' + Math.round(entCount/totalArts*100) + '%';
+    progBar.appendChild(progFill);
+    card.appendChild(progBar);
+
+    oc.arts.forEach(function(item) {
+      const artDiv = document.createElement('div');
+      artDiv.className = 'surtido-art';
+      
+      const descDiv = document.createElement('div');
+      descDiv.className = 'surtido-desc';
+      descDiv.innerHTML = '<span class="status-' + item.status + '">●</span> ' + item.desc;
+      
+      const cantDiv = document.createElement('div');
+      cantDiv.className = 'surtido-cant';
+      cantDiv.textContent = item.cant + ' ' + item.unidad;
+      
+      const sel = document.createElement('select');
+      sel.className = 'surtido-select';
+      Object.keys(SURTIDO_LABELS).forEach(function(val) {
+        const opt = document.createElement('option');
+        opt.value = val;
+        opt.textContent = SURTIDO_LABELS[val];
+        if(val === item.status) opt.selected = true;
+        sel.appendChild(opt);
+      });
+      
+      // Save status on change
+      (function(ocId, artIdx) {
+        sel.addEventListener('change', function() {
+          actualizarStatusArt(ocId, artIdx, this.value);
+        });
+      })(ocId, item.artIdx);
+      
+      artDiv.appendChild(descDiv);
+      artDiv.appendChild(cantDiv);
+      artDiv.appendChild(sel);
+      card.appendChild(artDiv);
+    });
+
+    // Action button if all entregado
+    if(entCount === totalArts && totalArts > 0) {
+      const btn = document.createElement('button');
+      btn.textContent = '📄 Listo para facturar';
+      btn.style.cssText = 'margin-top:.5rem;width:100%;padding:8px;background:var(--success-bg);color:var(--success);border:1px solid var(--success);border-radius:8px;font-size:12px;font-weight:600;cursor:pointer';
+      card.appendChild(btn);
+    }
+
+    el.appendChild(card);
+  });
+}
+
+async function actualizarStatusArt(ocId, artIdx, newStatus) {
+  try {
+    const docRef = firebase.doc(db, 'ocs', ocId);
+    const snap = await firebase.getDocs(firebase.query(firebase.collection(db,'ocs'), firebase.where('__name__','==',ocId)));
+    // Use getDoc instead
+    const ocSnap = _allOCDocs.find(function(d){ return d.id === ocId; });
+    if(!ocSnap) return;
+    const oc = JSON.parse(JSON.stringify(ocSnap.data()));
+    if(!oc.articulos || !oc.articulos[artIdx]) return;
+    oc.articulos[artIdx].surtidoStatus = newStatus;
+    await firebase.updateDoc(firebase.doc(db,'ocs',ocId), { articulos: oc.articulos });
+    // Update local cache
+    _surtidoData.forEach(function(item) {
+      if(item.ocId === ocId && item.artIdx === artIdx) item.status = newStatus;
+    });
+    filtrarSurtido();
+  } catch(e) { console.error('Error actualizando:', e); }
+}
+
+// ── PDF READER ──
+function setCapturaTab(tab, el) {
+  document.getElementById('captura-pdf').classList.toggle('hidden', tab !== 'pdf');
+  document.getElementById('captura-texto').classList.toggle('hidden', tab !== 'texto');
+  document.querySelectorAll('#oc-tab-capturar .tab-btn').forEach(function(b){ b.classList.remove('active'); });
+  if(el) el.classList.add('active');
+}
+
+function usarModoManual() { setCapturaTab('texto', null); }
+
+async function leerPDF(input) {
+  const file = input.files[0];
+  if(!file) return;
+  
+  const status = document.getElementById('pdf-status');
+  status.style.display = 'block';
+  status.textContent = 'Leyendo PDF...';
+
+  try {
+    if(!window.pdfjsLib) {
+      status.textContent = 'PDF.js no cargado. Usa el modo manual.';
+      return;
+    }
+    
+    const arrayBuffer = await file.arrayBuffer();
+    const pdf = await window.pdfjsLib.getDocument({data: arrayBuffer}).promise;
+    
+    var fullText = '';
+    for(var i = 1; i <= pdf.numPages; i++) {
+      const page = await pdf.getPage(i);
+      const content = await page.getTextContent();
+      const pageText = content.items.map(function(item){ return item.str; }).join(' ');
+      fullText += pageText + ' ';
+    }
+    
+    status.textContent = 'PDF leido. Procesando datos...';
+    document.getElementById('oc-texto').value = fullText;
+    procesarOCConArchivo(file, fullText);
+    
+  } catch(err) {
+    console.error(err);
+    status.textContent = 'Error al procesar el PDF. Usa el modo manual.';
+  }
+}
+
+
+async function procesarOCConArchivo(file, texto) {
+  // Store file for upload after confirmation
+  window._pendingPDFFile = file;
+  // Process text normally
+  document.getElementById('oc-texto').value = texto;
+  procesarOC();
+}
+
+// Override guardarOC to also upload PDF if present
+// PDF upload now handled inside guardarOC directly
+
+// ── PAGO DE FACTURAS ──
+var _facPagoId = null;
+var _facPagoData = null;
+
+function abrirPagoFactura(id, fac) {
+  _facPagoId = id;
+  _facPagoData = fac;
+  document.getElementById('facPagoModal-info').innerHTML =
+    '<div style="font-size:12px;font-weight:600;color:var(--navy)">' + (fac.folio||'') + '</div>' +
+    '<div style="font-size:11px;color:var(--text-2)">' + (fac.razon||'') + ' · ' + (fac.fecha||'') + '</div>' +
+    '<div style="font-size:14px;font-weight:700;color:var(--navy);margin-top:4px">' + fmt(fac.total) + '</div>';
+  document.getElementById('fac-pago-fecha').value = new Date().toISOString().split('T')[0];
+  document.getElementById('fac-pago-ref').value = '';
+  document.getElementById('fac-pago-monto').value = '';
+  document.getElementById('fac-pago-monto-field').style.display = 'none';
+  document.getElementById('fac-pago-tipo').onchange = function() {
+    document.getElementById('fac-pago-monto-field').style.display = this.value === 'abono' ? 'block' : 'none';
+  };
+  openModal('facPagoModal');
+}
+
+async function aplicarPagoFactura() {
+  if(!_facPagoId) return;
+  const tipo = document.getElementById('fac-pago-tipo').value;
+  const fecha = document.getElementById('fac-pago-fecha').value;
+  const ref = document.getElementById('fac-pago-ref').value.trim();
+  const montoAbono = parseFloat(document.getElementById('fac-pago-monto').value)||0;
+
+  if(!fecha) { alert('Selecciona la fecha de pago'); return; }
+
+  var update = {
+    tipoPago: tipo,
+    fechaPago: fecha
+  };
+
+  if(tipo === 'abono') {
+    if(!montoAbono || montoAbono <= 0) { alert('Ingresa el monto abonado'); return; }
+    const total = parseFloat(_facPagoData.total)||0;
+    update.status = 'abono';
+    update.montoAbono = montoAbono;
+    update.saldoPendiente = Math.round((total - montoAbono)*100)/100;
+    update.fechaAbono = fecha;
+  } else {
+    update.status = 'pagada';
+    if(tipo === 'spei' && ref) update.spei = ref;
+    if(ref) update.referenciaPago = ref;
+  }
+
+  try {
+    await firebase.updateDoc(firebase.doc(db,'facturas',_facPagoId), update);
+    closeModal('facPagoModal');
+    alert('✅ Pago registrado correctamente');
+    loadEstado();
+    loadDashboard();
+  } catch(e) {
+    alert('Error: ' + e.message);
+  }
+}
+
+// ── ESTADO DE CUENTA EXCEL ──
+async function generarEstadoCuenta() {
+  const clienteFiltro = document.getElementById('edo-cliente').value;
+  const statusEl = document.getElementById('edo-status');
+  statusEl.style.display = 'block';
+  statusEl.textContent = 'Obteniendo datos de Firebase...';
+
+  try {
+    const [facSnap, speiSnap, ocSnap] = await Promise.all([
+      firebase.getDocs(firebase.query(firebase.collection(db,'facturas'), firebase.orderBy('fecha','asc'))),
+      firebase.getDocs(firebase.query(firebase.collection(db,'speis'), firebase.orderBy('fecha','asc'))),
+      firebase.getDocs(firebase.collection(db,'ocs'))
+    ]);
+
+    const hoy = new Date();
+    const fechaStr = hoy.toLocaleDateString('es-MX', {day:'2-digit',month:'short',year:'numeric'});
+    
+    // Filter by client
+    const allFacs = facSnap.docs.map(d => d.data());
+    const allSPEIs = speiSnap.docs.map(d => d.data());
+    const allOCs = ocSnap.docs.map(d => d.data());
+    
+    const pendientes = allFacs.filter(f => f.status !== 'pagada' && (!clienteFiltro || (f.razon||'').toUpperCase().includes(clienteFiltro.toUpperCase())));
+    const pagadas = allFacs.filter(f => f.status === 'pagada' && (!clienteFiltro || (f.razon||'').toUpperCase().includes(clienteFiltro.toUpperCase())));
+    const ocsPend = allOCs.filter(oc => oc.status !== 'surtida' && (!clienteFiltro || (oc.razon||'').toUpperCase().includes(clienteFiltro.toUpperCase())));
+
+    // Calculate summary stats
+    let tot60 = 0, n60 = 0, tot30 = 0, n30 = 0, totVig = 0, nVig = 0, totPend = 0;
+    pendientes.forEach(f => {
+      const dias = f.fecha ? Math.floor((hoy - new Date(f.fecha))/86400000) : 0;
+      const monto = Number(f.total)||0;
+      totPend += monto;
+      if(dias > 60) { tot60 += monto; n60++; }
+      else if(dias > 0) { tot30 += monto; n30++; }
+      else { totVig += monto; nVig++; }
+    });
+    
+    const totSPEIs = allSPEIs.reduce((s,p) => s + (Number(p.monto)||0), 0);
+    const totOCs = ocsPend.reduce((s,oc) => s + (Number(oc.totalOC)||0), 0);
+    const totalArts = ocsPend.reduce((s,oc) => s + (oc.articulos ? oc.articulos.length : 0), 0);
+
+    const wb = XLSX.utils.book_new();
+
+    // ── SHEET 1: RESUMEN ──
+    statusEl.textContent = 'Generando hoja Resumen...';
+    const clienteNombre = clienteFiltro || 'TODOS LOS CLIENTES';
+    const resumenData = [
+      ['', 'ESTADO DE CUENTA — COMERCIALIZADORA VILLATORO'],
+      ['', 'Cliente: ' + clienteNombre + '  ·  Actualizado: ' + fechaStr + '  ·  Crédito: 15 días'],
+      [''],
+      ['', '⏳  ANTIGÜEDAD DE CARTERA — FACTURAS PENDIENTES DE COBRO'],
+      ['', 'TRAMO', 'Facturas', 'Monto con IVA', 'Acción'],
+      ['', '🔴  +60 días vencida', n60, tot60, 'Cobrar urgente'],
+      ['', '🟡  1–60 días vencida', n30, tot30, 'Gestionar cobro'],
+      ['', '🟢  Al corriente', nVig, totVig, 'OK — vigente'],
+      ['', 'TOTAL PENDIENTE DE COBRO', '', totPend, pendientes.length + ' facturas'],
+      [''],
+      ['', '✅  HISTÓRICO DE PAGOS'],
+      ['', 'CONCEPTO', 'Facturas', 'Monto', 'Detalle'],
+      ['', 'TOTAL FACTURADO (histórico)', pagadas.length, pagadas.reduce((s,f)=>s+(Number(f.total)||0),0), 'Ver hoja Histórico →'],
+      ['', 'SPEIs RECIBIDOS', allSPEIs.length, totSPEIs, allSPEIs.length + ' comprobantes'],
+      [''],
+      ['', "📦  OC'S POR SURTIR"],
+      ['', 'CONCEPTO', 'OCs', 'Valor Total Est.', 'Artículos'],
+      ['', 'PENDIENTES DE SURTIR', ocsPend.length, totOCs, totalArts + ' artículos'],
+      [''],
+      ['', '💳  PAGOS REGISTRADOS — COMPROBANTES SPEI'],
+      ['', 'No. SPEI', 'Fecha', 'Monto', 'Nota'],
+    ];
+    allSPEIs.forEach(s => {
+      resumenData.push(['', s.numero||'', s.fecha||'', Number(s.monto)||0, s.relacion ? 'Con relación' : '']);
+    });
+    resumenData.push(['', 'TOTAL COBRADO (SPEIs)', '', totSPEIs, allSPEIs.length + ' comprobantes']);
+    resumenData.push(['']);
+    resumenData.push(['', 'Comercializadora Villatoro · villatoro.comercializadora@gmail.com · WA 729 689 5138']);
+
+    const wsResumen = XLSX.utils.aoa_to_sheet(resumenData);
+    wsResumen['!cols'] = [{wch:3},{wch:50},{wch:12},{wch:18},{wch:25}];
+    XLSX.utils.book_append_sheet(wb, wsResumen, 'RESUMEN');
+
+    // ── SHEET 2: PENDIENTES DE PAGO ──
+    statusEl.textContent = 'Generando hoja Pendientes...';
+    const pendHeaders = ['COMPRADOR','RAZON SOCIAL','FOLIO FACTURA','IMPORTE','FECHA FACTURA','OC','FECHA OC','CREDITO','STATUS','DIAS VENCIDA'];
+    const pendRows = [pendHeaders];
+    pendientes.sort((a,b) => new Date(a.fecha||0) - new Date(b.fecha||0)).forEach(f => {
+      const dias = f.fecha ? Math.floor((hoy-new Date(f.fecha))/86400000) : 0;
+      pendRows.push([
+        f.comprador||'',
+        f.razon||'',
+        f.folio||'',
+        Number(f.total)||0,
+        f.fecha||'',
+        f.oc||'',
+        f.fechaOC||'',
+        f.credito||'15 DIAS',
+        f.status||'pendiente',
+        dias
+      ]);
+    });
+    const wsPend = XLSX.utils.aoa_to_sheet(pendRows);
+    wsPend['!cols'] = [{wch:15},{wch:25},{wch:38},{wch:14},{wch:14},{wch:12},{wch:12},{wch:10},{wch:12},{wch:12}];
+    XLSX.utils.book_append_sheet(wb, wsPend, 'PENDIENTES DE PAGO');
+
+    // ── SHEET 3: OCS POR SURTIR ──
+    statusEl.textContent = "Generando hoja OC's...";
+    const ocHeaders = ['COMPRADOR','OC','FECHA','CREDITO','ARTICULO','UNIDAD','P/U','CANTIDAD','SUBTOTAL','IVA','TOTAL','STATUS'];
+    const ocRows = [ocHeaders];
+    ocsPend.forEach(oc => {
+      if(oc.articulos && oc.articulos.length) {
+        oc.articulos.forEach(art => {
+          const sub = Number(art.subtotal)||(Number(art.pu)||0)*(Number(art.cant)||1);
+          const iva = Math.round(sub*0.16*100)/100;
+          ocRows.push([
+            oc.comprador||'',
+            oc.numero||'',
+            oc.fecha||'',
+            oc.credito||'15 DIAS',
+            art.desc||'',
+            art.unidad||'PIEZA',
+            Number(art.pu)||0,
+            Number(art.cant)||1,
+            sub,
+            iva,
+            Math.round((sub+iva)*100)/100,
+            art.surtidoStatus||'pendiente'
+          ]);
+        });
+      } else {
+        ocRows.push([oc.comprador||'', oc.numero||'', oc.fecha||'', oc.credito||'15 DIAS', '(sin artículos)', '', 0, 0, 0, 0, Number(oc.totalOC)||0, oc.status||'pendiente']);
+      }
+    });
+    const wsOCs = XLSX.utils.aoa_to_sheet(ocRows);
+    wsOCs['!cols'] = [{wch:15},{wch:12},{wch:12},{wch:10},{wch:40},{wch:8},{wch:12},{wch:10},{wch:12},{wch:12},{wch:12},{wch:12}];
+    XLSX.utils.book_append_sheet(wb, wsOCs, "OC's POR SURTIR");
+
+    // ── SHEET 4: HISTORICO DE PAGOS ──
+    statusEl.textContent = 'Generando hoja Histórico...';
+    const histHeaders = ['COMPRADOR','RAZON SOCIAL','FOLIO','IMPORTE','FECHA FACTURA','OC','CREDITO','STATUS','SPEI/PAGO','FECHA PAGO','TIPO PAGO'];
+    const histRows = [histHeaders];
+    pagadas.sort((a,b) => new Date(a.fecha||0) - new Date(b.fecha||0)).forEach(f => {
+      histRows.push([
+        f.comprador||'',
+        f.razon||'',
+        f.folio||'',
+        Number(f.total)||0,
+        f.fecha||'',
+        f.oc||'',
+        f.credito||'15 DIAS',
+        f.status||'pagada',
+        f.spei||f.referenciaPago||'',
+        f.fechaPago||'',
+        f.tipoPago||'SPEI'
+      ]);
+    });
+    const wsHist = XLSX.utils.aoa_to_sheet(histRows);
+    wsHist['!cols'] = [{wch:15},{wch:25},{wch:38},{wch:14},{wch:14},{wch:12},{wch:10},{wch:10},{wch:20},{wch:12},{wch:12}];
+    XLSX.utils.book_append_sheet(wb, wsHist, 'HISTORICO DE PAGOS');
+
+    // Download
+    statusEl.textContent = 'Descargando Excel...';
+    const fileName = 'Estado_Cuenta_Villatoro_' + fechaStr.replace(/\//g,'-') + '.xlsx';
+    XLSX.writeFile(wb, fileName);
+    statusEl.textContent = '✅ Excel generado correctamente';
+    setTimeout(() => { statusEl.style.display = 'none'; }, 3000);
+
+  } catch(e) {
+    statusEl.textContent = '❌ Error: ' + e.message;
+    console.error(e);
+  }
+}
+
+// Set today's date on load
+window.addEventListener('load', () => {
+  document.getElementById('sp-ordenante').value = 'AGRICOLA CIVE SA DE CV';
+  // Restore finanzas values
+  try {
+    const saved = JSON.parse(localStorage.getItem('vt_finanzas')||'{}');
+    if(saved.gas) document.getElementById('fin-gas').value = saved.gas;
+    if(saved.kmE) document.getElementById('fin-km-e').value = saved.kmE;
+    if(saved.kmC) document.getElementById('fin-km-c').value = saved.kmC;
+    if(saved.seguro) document.getElementById('fin-seguro').value = saved.seguro;
+    if(saved.mant) document.getElementById('fin-mant').value = saved.mant;
+    if(saved.ram) document.getElementById('fin-ram').value = saved.ram;
+    if(saved.vida) document.getElementById('fin-vida').value = saved.vida;
+    if(saved.sueldo) document.getElementById('fin-sueldo').value = saved.sueldo;
+    if(saved.ocs) document.getElementById('fin-ocs').value = saved.ocs;
+  } catch(e) {}
+});
+</script>
+</body>
+</html>

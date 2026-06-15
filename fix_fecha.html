@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>Corregir fecha factura</title>
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+  import { getFirestore, collection, getDocs, doc, updateDoc, query, where } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+  import { getAuth, signInWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+
+  const app = initializeApp({
+    apiKey: "AIzaSyBT3KfII_PvabcO-ovZPBUhGXG2d9KPs6s",
+    authDomain: "villatoro-app.firebaseapp.com",
+    projectId: "villatoro-app",
+    storageBucket: "villatoro-app.firebasestorage.app",
+    messagingSenderId: "332539765979",
+    appId: "1:332539765979:web:630a3e9a626b37a19418fe"
+  });
+  const db = getFirestore(app);
+  const auth = getAuth(app);
+
+  window.corregir = async function() {
+    const pass = document.getElementById('pass').value;
+    const log = document.getElementById('log');
+    const btn = document.getElementById('btn');
+    btn.disabled = true;
+    log.innerHTML = 'Iniciando sesión...<br>';
+    try {
+      await signInWithEmailAndPassword(auth, 'villatoro.comercializadora@gmail.com', pass);
+      log.innerHTML += '✅ Sesión iniciada<br>';
+      
+      // Find the factura by folio
+      const snap = await getDocs(query(collection(db,'facturas'), where('folio','==','3FB3E665-6C01-49A9-8F20-36A5C054FFB8')));
+      if(snap.empty) {
+        log.innerHTML += '❌ Factura no encontrada por folio, buscando por fecha...<br>';
+        // Search by wrong date
+        const snap2 = await getDocs(query(collection(db,'facturas'), where('fecha','==','3026-05-21')));
+        if(snap2.empty) {
+          log.innerHTML += '❌ No se encontró ninguna factura con fecha 3026-05-21';
+          btn.disabled = false;
+          return;
+        }
+        for(const d of snap2.docs) {
+          log.innerHTML += '📄 Encontrada: ' + d.data().folio + '<br>';
+          await updateDoc(doc(db,'facturas',d.id), { fecha: '2026-05-21' });
+          log.innerHTML += '✅ Fecha corregida: 3026-05-21 → 2026-05-21';
+        }
+      } else {
+        for(const d of snap.docs) {
+          log.innerHTML += '📄 Encontrada: ' + d.data().folio + '<br>';
+          await updateDoc(doc(db,'facturas',d.id), { fecha: '2026-05-21' });
+          log.innerHTML += '✅ Fecha corregida: 3026-05-21 → 2026-05-21';
+        }
+      }
+      btn.textContent = '✅ Listo';
+    } catch(e) {
+      log.innerHTML += '❌ Error: ' + e.message;
+      btn.disabled = false;
+    }
+  };
+</script>
+<style>
+body{font-family:-apple-system,sans-serif;max-width:400px;margin:2rem auto;padding:1rem;background:#f5f6f8}
+.card{background:white;border-radius:12px;padding:1.5rem;box-shadow:0 2px 12px rgba(0,0,0,.08)}
+h2{color:#1F4E79;margin-bottom:.5rem}
+p{color:#666;font-size:13px;margin-bottom:1rem}
+label{display:block;font-size:11px;font-weight:600;color:#666;text-transform:uppercase;margin-bottom:4px}
+input{width:100%;padding:10px 12px;border:1.5px solid #E2E8EF;border-radius:8px;font-size:14px;box-sizing:border-box}
+button{width:100%;margin-top:1rem;padding:12px;background:#1F4E79;color:white;border:none;border-radius:8px;font-size:14px;font-weight:600;cursor:pointer}
+button:disabled{opacity:.6}
+#log{margin-top:1rem;background:#f0f4f8;border-radius:8px;padding:.75rem;font-size:12px;line-height:1.8}
+</style>
+</head>
+<body>
+<div class="card">
+  <h2>Corregir fecha factura</h2>
+  <p>Corrige la fecha incorrecta <strong>3026-05-21</strong> → <strong>2026-05-21</strong> en la factura 3FB3E665 (OC20769, $233.80)</p>
+  <label>Contraseña</label>
+  <input type="password" id="pass" placeholder="Tu contraseña de la app">
+  <button id="btn" onclick="corregir()">Corregir fecha</button>
+  <div id="log">Esperando...</div>
+</div>
+</body>
+</html>

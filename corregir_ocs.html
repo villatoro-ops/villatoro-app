@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>Corregir OCs</title>
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+  import { getFirestore, collection, getDocs, doc, updateDoc } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+  import { getAuth, signInWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+
+  const app = initializeApp({
+    apiKey: "AIzaSyBT3KfII_PvabcO-ovZPBUhGXG2d9KPs6s",
+    authDomain: "villatoro-app.firebaseapp.com",
+    projectId: "villatoro-app",
+    storageBucket: "villatoro-app.firebasestorage.app",
+    messagingSenderId: "332539765979",
+    appId: "1:332539765979:web:630a3e9a626b37a19418fe"
+  });
+  const db = getFirestore(app);
+  const auth = getAuth(app);
+  const fmt = n => Number(n).toLocaleString('es-MX',{style:'currency',currency:'MXN'});
+
+  const BASE = {"OC19972": {"numero": "OC19972", "comprador": "ANA RAMIREZ", "fecha": "27/ene./2026", "credito": "15 DIAS", "articulos": [{"desc": "ARRANQUE RETRACTIL VANGUARD 18HP 841729 BRIGGS", "unidad": "PIEZA", "pu": 3958.0, "cant": 3.0, "subtotal": 11874.0, "iva": 1899.8400000000001, "total": 13773.84}, {"desc": "SWICH DE ENCENDIDO VANGUARD 18HP BRIGGS", "unidad": "PIEZA", "pu": 899.0, "cant": 7.0, "subtotal": 6293.0, "iva": 1006.88, "total": 7299.88}, {"desc": "ACUMULADOR LTH 12V 18Ah", "unidad": "PIEZA", "pu": 1923.0, "cant": 4.0, "subtotal": 7692.0, "iva": 1230.72, "total": 8922.72}, {"desc": "MANOMETRO DE GLICERINA ENTRADA 1/4 0-800 PSI", "unidad": "PIEZA", "pu": 489.0, "cant": 5.0, "subtotal": 2445.0, "iva": 391.2, "total": 2836.2}, {"desc": "CADENA PASO 40 CADENA", "unidad": "PIEZA", "pu": 285.0, "cant": 3.0, "subtotal": 855.0, "iva": 136.8, "total": 991.8}, {"desc": "TORNILLO HEXAGONAL M6X30 MM", "unidad": "PIEZA", "pu": 5.0, "cant": 30.0, "subtotal": 150.0, "iva": 24.0, "total": 174.0}, {"desc": "TUERCA SEGURIDAD M6", "unidad": "PIEZA", "pu": 5.0, "cant": 30.0, "subtotal": 150.0, "iva": 24.0, "total": 174.0}, {"desc": "TUERCA SEGURIDAD M4", "unidad": "PIEZA", "pu": 5.0, "cant": 30.0, "subtotal": 150.0, "iva": 24.0, "total": 174.0}, {"desc": "TORNILLO HEXAGONAL M4X100 MM", "unidad": "PIEZA", "pu": 50.0, "cant": 30.0, "subtotal": 1500.0, "iva": 240.0, "total": 1740.0}, {"desc": "TORNILLO HEXAGONAL M8X100 MM", "unidad": "PIEZA", "pu": 50.0, "cant": 30.0, "subtotal": 1500.0, "iva": 240.0, "total": 1740.0}, {"desc": "TORNILLO HEXAGONAL M12X100 MM", "unidad": "PIEZA", "pu": 50.0, "cant": 30.0, "subtotal": 1500.0, "iva": 240.0, "total": 1740.0}, {"desc": "CAJA DE ENGRANES PARA DESBROZADORA SHINDAIWA", "unidad": "PIEZA", "pu": 1217.0, "cant": 2.0, "subtotal": 2434.0, "iva": 389.44, "total": 2823.44}, {"desc": "TORNILLO HEXAGONAL M10X100 MM", "unidad": "PIEZA", "pu": 50.0, "cant": 15.0, "subtotal": 750.0, "iva": 120.0, "total": 870.0}, {"desc": "MANGUERA ANILLADA DE SUCCIÓN 1 1/2 PULGADAS", "unidad": "MTS", "pu": 3516.0, "cant": 24.0, "subtotal": 84384.0, "iva": 13501.44, "total": 97885.44}, {"desc": "CUERDA DE ARRANQUE PIOLA 4MM", "unidad": "MTS", "pu": 623.0, "cant": 15.0, "subtotal": 9345.0, "iva": 1495.2, "total": 10840.2}, {"desc": "FILTRO DE AIRE PARA B AND S 386447", "unidad": "PIEZA", "pu": 950.0, "cant": 6.0, "subtotal": 5700.0, "iva": 912.0, "total": 6612.0}, {"desc": "BUJIA CHAMPION XC92YC", "unidad": "PIEZA", "pu": 195.0, "cant": 25.0, "subtotal": 4875.0, "iva": 780.0, "total": 5655.0}, {"desc": "SWITCH INTERRUPTOR MOTOR KOHLER CH18 CH20 CH23", "unidad": "PIEZA", "pu": 1350.0, "cant": 5.0, "subtotal": 6750.0, "iva": 1080.0, "total": 7830.0}, {"desc": "MANOMETRO DE PRESIÓN DE 63MM, PASO 0-60B, 1/4,", "unidad": "PIEZA", "pu": 716.0, "cant": 4.0, "subtotal": 2864.0, "iva": 458.24, "total": 3322.24}, {"desc": "MOTOR DE ARRANQUE MOTOR DE ARRANQUE B AND S", "unidad": "PIEZA", "pu": 1831.0, "cant": 2.0, "subtotal": 3662.0, "iva": 585.92, "total": 4247.92}, {"desc": "SELENOIDE DE ARRANQUE B AND S SELENOIDE DE", "unidad": "PIEZA", "pu": 392.0, "cant": 2.0, "subtotal": 784.0, "iva": 125.44, "total": 909.44}], "totalOC": 180562.12, "subtotalOC": 155657.0}, "OC20057": {"numero": "OC20057", "comprador": "ANA RAMIREZ", "fecha": "09/feb./2026", "credito": "15 DIAS", "articulos": [{"desc": "JUNTA DE CARBURADOR", "unidad": "PIEZA", "pu": 381.0, "cant": 2.0, "subtotal": 762.0, "iva": 121.92, "total": 883.92}, {"desc": "FILTRO DE ACEITE FILTRO DE ACEITE 18HP B AND S", "unidad": "PIEZA", "pu": 268.0, "cant": 4.0, "subtotal": 1072.0, "iva": 171.52, "total": 1243.52}, {"desc": "FILTRO DE COMBUSTIBLE 4266", "unidad": "PIEZA", "pu": 253.0, "cant": 4.0, "subtotal": 1012.0, "iva": 161.92000000000002, "total": 1173.92}, {"desc": "BUJIA BS-OHV 18HP B AND S VANGUARD", "unidad": "PIEZA", "pu": 108.0, "cant": 8.0, "subtotal": 864.0, "iva": 138.24, "total": 1002.24}, {"desc": "BOMBA DE COMBUSTIBLE B AND S", "unidad": "PIEZA", "pu": 639.0, "cant": 3.0, "subtotal": 1917.0, "iva": 306.72, "total": 2223.7200000000003}, {"desc": "CATARINA PASO 50 12 DIENTES", "unidad": "PIEZA", "pu": 276.0, "cant": 15.0, "subtotal": 4140.0, "iva": 662.4, "total": 4802.4}, {"desc": "TAMBOR DE EMBRAGUE GENUINO ECHO", "unidad": "PIEZA", "pu": 956.0, "cant": 3.0, "subtotal": 2868.0, "iva": 458.88, "total": 3326.88}, {"desc": "FLECHA ASTRIADA SWINDAWA 1CMX 90CM", "unidad": "PIEZA", "pu": 2320.0, "cant": 3.0, "subtotal": 6960.0, "iva": 1113.6000000000001, "total": 8073.6}, {"desc": "DISCO SIERRA PARA MADERA 10” 80 DIENTES DWA03130", "unidad": "PIEZA", "pu": 1427.0, "cant": 3.0, "subtotal": 4281.0, "iva": 684.96, "total": 4965.96}, {"desc": "MOBIL GREASE XHP 222", "unidad": "CUB", "pu": 8937.0, "cant": 1.0, "subtotal": 8937.0, "iva": 1429.92, "total": 10366.92}, {"desc": "CAPUCHON BUJIA HUSQVARNA", "unidad": "PIEZA", "pu": 379.0, "cant": 10.0, "subtotal": 3790.0, "iva": 606.4, "total": 4396.4}, {"desc": "FILTRO DE AIRE 345 BT COMPLETO", "unidad": "PIEZA", "pu": 1398.0, "cant": 20.0, "subtotal": 27960.0, "iva": 4473.6, "total": 32433.6}, {"desc": "CARBURADOR PARA SOPLADORA HUSQVARNA 345 BT", "unidad": "PIEZA", "pu": 2116.0, "cant": 2.0, "subtotal": 4232.0, "iva": 677.12, "total": 4909.12}, {"desc": "FILTRO GASOLINA FILTRO GASOLINA FELPA", "unidad": "PIEZA", "pu": 189.0, "cant": 50.0, "subtotal": 9450.0, "iva": 1512.0, "total": 10962.0}, {"desc": "REDONDO DE 3/8 INOX REDONDO", "unidad": "PIEZA", "pu": 483.0, "cant": 1.0, "subtotal": 483.0, "iva": 77.28, "total": 560.28}, {"desc": "JUEGO DE 1000 TORNILLOS MÉTRICOS + SAE SET DE", "unidad": "JUE", "pu": 895.0, "cant": 1.0, "subtotal": 895.0, "iva": 143.20000000000002, "total": 1038.2}, {"desc": "JUEGO DE O-RINGS JUEGO DE O-RINGS", "unidad": "JUE", "pu": 689.0, "cant": 1.0, "subtotal": 689.0, "iva": 110.24000000000001, "total": 799.24}], "totalOC": 93161.92, "subtotalOC": 80312.0}, "OC20204": {"numero": "OC20204", "comprador": "ANA RAMIREZ", "fecha": "02/mar./2026", "credito": "15 DIAS", "articulos": [{"desc": "AMORTIGUADOR DELANTERO L200 08-20", "unidad": "PIEZA", "pu": 1586.0, "cant": 2.0, "subtotal": 3172.0, "iva": 507.52000000000004, "total": 3679.52}, {"desc": "TORNILLO ESTABILIZADOR MITSUBISHI L200 2019", "unidad": "PIEZA", "pu": 1084.0, "cant": 2.0, "subtotal": 2168.0, "iva": 346.88, "total": 2514.88}, {"desc": "TERMINAL DE DIRECCION TERMINAL DE DIRECCION", "unidad": "PIEZA", "pu": 1378.0, "cant": 1.0, "subtotal": 1378.0, "iva": 220.48000000000002, "total": 1598.48}, {"desc": "TERMINAL DE DIRECCION INTERIOR L MITSUBISHI L200", "unidad": "PIEZA", "pu": 1378.0, "cant": 1.0, "subtotal": 1378.0, "iva": 220.48000000000002, "total": 1598.48}, {"desc": "GOMAS BARRA ESTABILIZADORA L200", "unidad": "PIEZA", "pu": 499.0, "cant": 2.0, "subtotal": 998.0, "iva": 159.68, "total": 1157.68}, {"desc": "MAZA BALERO MITSUBISHI L200", "unidad": "PIEZA", "pu": 2200.0, "cant": 2.0, "subtotal": 4400.0, "iva": 704.0, "total": 5104.0}, {"desc": "TERMINAL DE DIRECCION EXTERIOR R MITSUBISHI L200", "unidad": "PIEZA", "pu": 1350.0, "cant": 1.0, "subtotal": 1350.0, "iva": 216.0, "total": 1566.0}, {"desc": "TERMINAL DE DIRECCION EXTERIOR L MITSUBISHI L200", "unidad": "PIEZA", "pu": 1350.0, "cant": 1.0, "subtotal": 1350.0, "iva": 216.0, "total": 1566.0}], "totalOC": 18785.04, "subtotalOC": 16194.0}, "OC20423": {"numero": "OC20423", "comprador": "ANA RAMIREZ", "fecha": "26/mar./2026", "credito": "15 DIAS", "articulos": [{"desc": "BANDA DE ACCESORIOS PARA CHEVROLET ONIX 2023\nTURBO 1.0", "unidad": "PIEZA", "pu": 770.0, "cant": 1.0, "subtotal": 770.0, "iva": 123.2, "total": 893.2}, {"desc": "POLEA TENSORA PARA CHEVROLET ONIX 2023 TURBO 1.0", "unidad": "PIEZA", "pu": 1000.0, "cant": 1.0, "subtotal": 1000.0, "iva": 160.0, "total": 1160.0}], "totalOC": 2053.2, "subtotalOC": 1770.0}, "OC20424": {"numero": "OC20424", "comprador": "ANA RAMIREZ", "fecha": "26/mar./2026", "credito": "15 DIAS", "articulos": [{"desc": "BANDA DE ACCESORIOS TOYOTA HILUX 2022 BANDA DE ACCESORIOS TOYOTA HILUX 2022", "unidad": "PIEZA", "pu": 998.0, "cant": 1.0, "subtotal": 998.0, "iva": 159.68, "total": 1157.68}, {"desc": "BANDA DE ACCESORIOS TOYOTA HILUX 2022 BANDA", "unidad": "PIEZA", "pu": 998.0, "cant": 1.0, "subtotal": 998.0, "iva": 159.68, "total": 1157.68}], "totalOC": 2315.36, "subtotalOC": 1996.0}, "OC20425": {"numero": "OC20425", "comprador": "ANA RAMIREZ", "fecha": "26/mar./2026", "credito": "15 DIAS", "articulos": [{"desc": "JUEGO DE BALATAS DELANTERAS PARA TOYOTA YARIS 2022", "unidad": "PIEZA", "pu": 450.0, "cant": 1.0, "subtotal": 450.0, "iva": 72.0, "total": 522.0}, {"desc": "JUEGO DE BALATAS TRASERA PARA TOYOTA YARIS 2022", "unidad": "PIEZA", "pu": 480.0, "cant": 1.0, "subtotal": 480.0, "iva": 76.8, "total": 556.8}], "totalOC": 1078.8, "subtotalOC": 930.0}, "OC20580": {"numero": "OC20580", "comprador": "ANA RAMIREZ", "fecha": "16/abr./2026", "credito": "15 DIAS", "articulos": [{"desc": "DESVIADOR TRASERO ECO PAA BICICLETA", "unidad": "PIEZA", "pu": 210.0, "cant": 1.0, "subtotal": 210.0, "iva": 33.6, "total": 243.6}], "totalOC": 243.6, "subtotalOC": 210.0}, "OC20581": {"numero": "OC20581", "comprador": "ANA RAMIREZ", "fecha": "16/abr./2026", "credito": "15 DIAS", "articulos": [{"desc": "DESVIADOR CENTRAL ECO PAA BICICLETA", "unidad": "PIEZA", "pu": 170.0, "cant": 1.0, "subtotal": 170.0, "iva": 27.2, "total": 197.2}], "totalOC": 197.2, "subtotalOC": 170.0}, "OC20582": {"numero": "OC20582", "comprador": "ANA RAMIREZ", "fecha": "16/abr./2026", "credito": "15 DIAS", "articulos": [{"desc": "SENSOR DE OXIGENO L200 2019 2.4LTS GASOLINA BOSCH", "unidad": "PIEZA", "pu": 2300.0, "cant": 1.0, "subtotal": 2300.0, "iva": 368.0, "total": 2668.0}, {"desc": "SENSOR DE OXIGENO L200 2019 2.4LTS GASOLINA BOSCH", "unidad": "PIEZA", "pu": 2300.0, "cant": 1.0, "subtotal": 2300.0, "iva": 368.0, "total": 2668.0}, {"desc": "KIT HERRAJE CALIPER L200 10-20 D1519 CK-HOKC619A", "unidad": "PIEZA", "pu": 1865.0, "cant": 1.0, "subtotal": 1865.0, "iva": 298.40000000000003, "total": 2163.4}, {"desc": "KIT HERRAJE CALIPERKIT HERRAJE BALATAS TAMBOR L200 COLORADO S10\n10-17 D1016 CK-HOKT512R", "unidad": "PIEZA", "pu": 1865.0, "cant": 1.0, "subtotal": 1865.0, "iva": 298.40000000000003, "total": 2163.4}], "totalOC": 9662.8, "subtotalOC": 8330.0}, "OC20583": {"numero": "OC20583", "comprador": "ANA RAMIREZ", "fecha": "16/abr./2026", "credito": "15 DIAS", "articulos": [{"desc": "FILTRO DIESEL RE60021", "unidad": "PIEZA", "pu": 1358.0, "cant": 6.0, "subtotal": 8148.0, "iva": 1303.68, "total": 9451.68}, {"desc": "FILTRO AT171854 FILTRO AT171854", "unidad": "PIEZA", "pu": 1110.0, "cant": 2.0, "subtotal": 2220.0, "iva": 355.2, "total": 2575.2}, {"desc": "FILTRO AT171853 FILTRO AT171853", "unidad": "PIEZA", "pu": 1610.0, "cant": 2.0, "subtotal": 3220.0, "iva": 515.2, "total": 3735.2}, {"desc": "FILTRO RE504836 FILTRO RE504836", "unidad": "PIEZA", "pu": 1150.0, "cant": 6.0, "subtotal": 6900.0, "iva": 1104.0, "total": 8004.0}, {"desc": "FILTRO HIDRAULICO AN203010  (EQUIVALENTE BALDWIN BT8848)", "unidad": "PIEZA", "pu": 1950.0, "cant": 2.0, "subtotal": 3900.0, "iva": 624.0, "total": 4524.0}], "totalOC": 28290.08, "subtotalOC": 24388.0}, "OC20584": {"numero": "OC20584", "comprador": "ANA RAMIREZ", "fecha": "16/abr./2026", "credito": "15 DIAS", "articulos": [{"desc": "FILTRO ACEITE PARA NEW HOLLAND B167 (SERIA EQUIVALENTE WIX51797 O DONALDSON P558250 SUJETO A DISPONIBILIDAD)", "unidad": "PIEZA", "pu": 520.0, "cant": 3.0, "subtotal": 1560.0, "iva": 249.6, "total": 1809.6}, {"desc": "FILTRO COMBUSTIBLE PARA NEW HOLLAND BF1226  (SERIA EQUIVALENTE WIX33472 O DONALDSON P550248 SUJETO A DISPONIBILIDAD)", "unidad": "PIEZA", "pu": 628.0, "cant": 3.0, "subtotal": 1884.0, "iva": 301.44, "total": 2185.44}], "totalOC": 3995.04, "subtotalOC": 3444.0}, "OC20658": {"numero": "OC20658", "comprador": "ANA RAMIREZ", "fecha": "24/abr./2026", "credito": "15 DIAS", "articulos": [{"desc": "KIT DE CILINDRO Y PISTON PARA MOTOCICLETA DT110 KIT", "unidad": "KIT", "pu": 722.4, "cant": 1.0, "subtotal": 722.4, "iva": 115.584, "total": 837.9839999999999}, {"desc": "PAR DE MONOMANDOS PARA DT110", "unidad": "PAR", "pu": 1075.2, "cant": 1.0, "subtotal": 1075.2, "iva": 172.032, "total": 1247.232}, {"desc": "CHICOTE DE VELOCIMETRO PARA DT110", "unidad": "PIEZA", "pu": 298.0, "cant": 1.0, "subtotal": 298.0, "iva": 47.68, "total": 345.68}], "totalOC": 2430.9, "subtotalOC": 2095.6}, "OC20659": {"numero": "OC20659", "comprador": "ANA RAMIREZ", "fecha": "24/abr./2026", "credito": "15 DIAS", "articulos": [{"desc": "DIRECCIONALES DELANTEROS DT150", "unidad": "PAR", "pu": 630.0, "cant": 2.0, "subtotal": 1260.0, "iva": 201.6, "total": 1461.6}, {"desc": "CHICOTE DE VELOCIMETRO DT150", "unidad": "PIEZA", "pu": 180.0, "cant": 1.0, "subtotal": 180.0, "iva": 28.8, "total": 208.8}], "totalOC": 1670.4, "subtotalOC": 1440.0}, "OC20744": {"numero": "OC20744", "comprador": "ANA RAMIREZ", "fecha": "04/may./2026", "credito": "15 DIAS", "articulos": [{"desc": "SENSOR DE TEMPERATURA PARA TOYOYA HILUX 2023", "unidad": "PIEZA", "pu": 1750.88, "cant": 1.0, "subtotal": 1750.88, "iva": 280.1408, "total": 2031.0208000000002}], "totalOC": 2031.02, "subtotalOC": 1750.88}, "OC20783": {"numero": "OC20783", "comprador": "MELISSA VILLEGAAS", "fecha": "05/may./2026", "credito": "15 DIAS", "articulos": [{"desc": "ACUMULADOR LTH 12V 18Ah", "unidad": "PIEZA", "pu": 2115.3, "cant": 4.0, "subtotal": 8461.2, "iva": 1353.7920000000001, "total": 9814.992}], "totalOC": 9814.99, "subtotalOC": 8461.2}, "OC20784": {"numero": "OC20784", "comprador": "MELISSA VILLEGAAS", "fecha": "05/may./2026", "credito": "15 DIAS", "articulos": [{"desc": "BUJIA DE COBRE PARA MOTORES NP XC92YC", "unidad": "PIEZA", "pu": 457.5, "cant": 36.0, "subtotal": 16470.0, "iva": 2635.2000000000003, "total": 19105.2}], "totalOC": 19105.2, "subtotalOC": 16470.0}, "OC20848": {"numero": "OC20848", "comprador": "MELISSA VILLEGAAS", "fecha": "12/may./2026 OC20848", "credito": "15 DIAS", "articulos": [{"desc": "ACUMULADOR LTH 12V 18Ah", "unidad": "PIEZA", "pu": 1923.0, "cant": 4.0, "subtotal": 7692.0, "iva": 1230.72, "total": 8922.72}], "totalOC": 8922.72, "subtotalOC": 7692.0}, "OC20893": {"numero": "OC20893", "comprador": "MELISSA VILLEGAAS", "fecha": "14/may./2026", "credito": "15 DIAS", "articulos": [{"desc": "ARRANQUE RETRACTIL VANGUARD 18HP 841729 BRIGGS", "unidad": "PIEZA", "pu": 4354.0, "cant": 3.0, "subtotal": 13062.0, "iva": 2089.92, "total": 15151.92}, {"desc": "SWICH DE ENCENDIDO VANGUARD 18HP BRIGGS AND STRATON", "unidad": "PIEZA", "pu": 989.0, "cant": 7.0, "subtotal": 6923.0, "iva": 1107.68, "total": 8030.68}, {"desc": "MANOMETRO DE GLICERINA ENTRADA 1/4 0-800 PSI", "unidad": "PIEZA", "pu": 538.0, "cant": 5.0, "subtotal": 2690.0, "iva": 430.40000000000003, "total": 3120.4}, {"desc": "MANGUERA ANILLADA DE SUCCIÓN 1 1/2 PULGADAS", "unidad": "PIEZA", "pu": 140.0, "cant": 24.0, "subtotal": 3360.0, "iva": 537.6, "total": 3897.6}, {"desc": "MANGUERA ANILLADA DE SUCCIÓN 1 3/16 PULGADAS", "unidad": "PIEZA", "pu": 250.0, "cant": 12.0, "subtotal": 3000.0, "iva": 480.0, "total": 3480.0}, {"desc": "FILTRO DE AIRE PARA B AND S 386447", "unidad": "PIEZA", "pu": 1045.0, "cant": 6.0, "subtotal": 6270.0, "iva": 1003.2, "total": 7273.2}, {"desc": "BUJIA CHAMPION XC92YC", "unidad": "PIEZA", "pu": 215.0, "cant": 25.0, "subtotal": 5375.0, "iva": 860.0, "total": 6235.0}], "totalOC": 47188.8, "subtotalOC": 40680.0}, "OC20969": {"numero": "OC20969", "comprador": "ANA RAMIREZ", "fecha": "19/may./2026", "credito": "15 DIAS", "articulos": [{"desc": "BARRA DE TERCER PUNTO DE ANCLAJE PARA TRACTOR JOHN DEERE 5415", "unidad": "PIEZA", "pu": 2500.0, "cant": 1.0, "subtotal": 2500.0, "iva": 400.0, "total": 2900.0}], "totalOC": 2900.0, "subtotalOC": 2500.0}, "OC20973": {"numero": "OC20973", "comprador": "MELISSA VILLEGAAS", "fecha": "19/may./2026", "credito": "15 DIAS", "articulos": [{"desc": "MANOMETRO CON GLISERINA 600 PSI", "unidad": "PIEZA", "pu": 488.85, "cant": 15.0, "subtotal": 7332.75, "iva": 1173.24, "total": 8505.99}], "totalOC": 8505.99, "subtotalOC": 7332.75}, "OC69218": {"numero": "OC69218", "comprador": "ANA RAMIREZ", "fecha": "20/may./2026", "credito": "15 DIAS", "articulos": [{"desc": "SENSOR DE OXIGENO BANCO 1 NISSAN FRONTIER 2023", "unidad": "PIEZA", "pu": 1865.0, "cant": 1.0, "subtotal": 1865.0, "iva": 298.40000000000003, "total": 2163.4}, {"desc": "SENSOR DE OXIGENO BANCO 2 NISSAN FRONTIER 2023", "unidad": "PIEZA", "pu": 1865.0, "cant": 1.0, "subtotal": 1865.0, "iva": 298.40000000000003, "total": 2163.4}], "totalOC": 4326.8, "subtotalOC": 3730.0}, "OC13369": {"numero": "OC13369", "comprador": "ANA RAMIREZ", "fecha": "20/may./2026", "credito": "15 DIAS", "articulos": [{"desc": "BATERIA MF-FA ICB5I-B PARA MOTOCICLETA DT110", "unidad": "PIEZA", "pu": 750.0, "cant": 1.0, "subtotal": 750.0, "iva": 120.0, "total": 870.0}], "totalOC": 870.0, "subtotalOC": 750.0}};
+
+  window.corregir = async function() {
+    const pass = document.getElementById('pass').value;
+    const log = document.getElementById('log');
+    const btn = document.getElementById('btn');
+    btn.disabled = true;
+    log.innerHTML = 'Iniciando sesión...<br>';
+    
+    try {
+      await signInWithEmailAndPassword(auth, 'villatoro.comercializadora@gmail.com', pass);
+      log.innerHTML += '✅ Sesión iniciada<br><br>';
+
+      const snap = await getDocs(collection(db,'ocs'));
+      let corregidas = 0, omitidas = 0;
+
+      for(const d of snap.docs) {
+        const oc = d.data();
+        const num = oc.numero || '';
+        const base = BASE[num];
+        
+        if(!base) {
+          log.innerHTML += `⏭️ ${num}: no estaba en Excel base — omitida<br>`;
+          omitidas++;
+          continue;
+        }
+
+        // Build a map of desc -> surtidoStatus from CURRENT Firebase articles
+        // to preserve any progress already made
+        const statusActual = {};
+        if(oc.articulos && oc.articulos.length) {
+          oc.articulos.forEach(a => {
+            if(a.surtidoStatus && a.surtidoStatus !== 'pendiente') {
+              // Use description as key (trimmed and lowercase for fuzzy match)
+              const key = (a.desc||'').trim().toLowerCase().substring(0,30);
+              statusActual[key] = a.surtidoStatus;
+            }
+          });
+        }
+
+        const statusPreservados = Object.keys(statusActual).length;
+
+        // Build corrected articulos from base, preserving status where possible
+        const articulos = base.articulos.map(a => {
+          const key = (a.desc||'').trim().toLowerCase().substring(0,30);
+          const statusPrev = statusActual[key] || 'pendiente';
+          return {
+            desc: a.desc,
+            unidad: a.unidad,
+            pu: a.pu,
+            cant: a.cant,
+            subtotal: a.subtotal,
+            iva: a.iva,
+            total: a.total,
+            surtidoStatus: statusPrev
+          };
+        });
+
+        await updateDoc(doc(db,'ocs',d.id), {
+          articulos: articulos,
+          totalOC: base.totalOC,
+          subtotalOC: base.subtotalOC,
+          comprador: base.comprador || oc.comprador || '',
+          credito: base.credito || oc.credito || '15 DIAS'
+        });
+
+        const statusMsg = statusPreservados > 0 
+          ? ` · <b style="color:green">${statusPreservados} status preservados</b>` 
+          : '';
+        log.innerHTML += `✅ ${num}: ${articulos.length} arts · ${fmt(base.totalOC)}${statusMsg}<br>`;
+        corregidas++;
+      }
+
+      log.innerHTML += `<br><b>✅ ${corregidas} OC(s) corregidas · ${omitidas} omitidas</b>`;
+      btn.textContent = '✅ Listo';
+    } catch(e) {
+      log.innerHTML += '❌ Error: ' + e.message;
+      btn.disabled = false;
+    }
+  };
+</script>
+<style>
+body{font-family:-apple-system,sans-serif;max-width:600px;margin:2rem auto;padding:1rem}
+.card{background:white;border-radius:12px;padding:1.5rem;box-shadow:0 2px 12px rgba(0,0,0,.1)}
+h2{color:#1F4E79;margin-bottom:.5rem}
+p{color:#666;font-size:13px;margin-bottom:1rem}
+.warn{background:#FFF3E0;border:1px solid #FFE0B2;border-radius:8px;padding:.75rem;font-size:12px;color:#E65100;margin-bottom:1rem}
+input{padding:10px;border:1.5px solid #ccc;border-radius:8px;font-size:14px;width:200px}
+button{padding:10px 20px;background:#1F4E79;color:white;border:none;border-radius:8px;font-size:14px;cursor:pointer;margin-left:8px;font-weight:600}
+button:disabled{opacity:.6}
+#log{margin-top:1rem;font-size:12px;line-height:2;max-height:500px;overflow-y:auto;background:#f5f5f5;padding:.75rem;border-radius:8px}
+</style>
+</head>
+<body>
+<div class="card">
+  <h2>🔧 Corregir OCs en Firebase</h2>
+  <p>Reemplaza artículos y totales usando los datos correctos del Excel base 28/05/2026. Los status de surtido (solicitado, comprado, etc.) se preservan automáticamente.</p>
+  <div class="warn">⚠️ Solo se corrigen las 22 OCs del Excel base. OCs nuevas capturadas después del 28/05 no se tocan.</div>
+  <input type="password" id="pass" placeholder="Contraseña">
+  <button id="btn" onclick="corregir()">Corregir todas las OCs</button>
+  <div id="log">Esperando...</div>
+</div>
+</body>
+</html>

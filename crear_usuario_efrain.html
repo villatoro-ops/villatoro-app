@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>Crear usuario Efraín</title>
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+  import { getFirestore, doc, setDoc } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+  import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+
+  const app = initializeApp({
+    apiKey: "AIzaSyBT3KfII_PvabcO-ovZPBUhGXG2d9KPs6s",
+    authDomain: "villatoro-app.firebaseapp.com",
+    projectId: "villatoro-app",
+    storageBucket: "villatoro-app.firebasestorage.app",
+    messagingSenderId: "332539765979",
+    appId: "1:332539765979:web:630a3e9a626b37a19418fe"
+  });
+  const db = getFirestore(app);
+  const auth = getAuth(app);
+
+  window.crearUsuario = async function() {
+    const adminPass = document.getElementById('admin-pass').value;
+    const newPass = document.getElementById('new-pass').value;
+    const log = document.getElementById('log');
+    const btn = document.getElementById('btn');
+    
+    if(!newPass || newPass.length < 6) { 
+      log.innerHTML = '❌ La contraseña debe tener al menos 6 caracteres'; 
+      return; 
+    }
+    
+    btn.disabled = true;
+    log.innerHTML = 'Iniciando sesión como admin...<br>';
+
+    try {
+      // Sign in as admin first
+      await signInWithEmailAndPassword(auth, 'villatoro.comercializadora@gmail.com', adminPass);
+      log.innerHTML += '✅ Admin autenticado<br>';
+
+      // Create new user
+      log.innerHTML += 'Creando cuenta de Efraín...<br>';
+      const cred = await createUserWithEmailAndPassword(auth, 'efrasonik@gmail.com', newPass);
+      log.innerHTML += '✅ Cuenta creada<br>';
+
+      // Set role in Firestore
+      await setDoc(doc(db, 'users', cred.user.uid), {
+        email: 'efrasonik@gmail.com',
+        nombre: 'Efraín Reyes',
+        role: 'operativo',
+        createdAt: new Date().toISOString()
+      });
+      log.innerHTML += '✅ Rol operativo asignado<br><br>';
+      log.innerHTML += '<b style="color:green">✅ Listo. Efraín puede iniciar sesión con:<br>Correo: efrasonik@gmail.com<br>Contraseña: la que definiste arriba</b>';
+      btn.textContent = '✅ Listo';
+    } catch(e) {
+      if(e.code === 'auth/email-already-in-use') {
+        log.innerHTML += '⚠️ El correo ya tiene cuenta. Asignando rol operativo...<br>';
+        try {
+          // Just update the role in Firestore
+          const snap = await getAuth(app).currentUser;
+          // Find user by email - set doc with email as key
+          await setDoc(doc(db, 'users', 'efrain_reyes'), {
+            email: 'efrasonik@gmail.com',
+            nombre: 'Efraín Reyes',
+            role: 'operativo',
+            createdAt: new Date().toISOString()
+          });
+          log.innerHTML += '✅ Rol operativo asignado<br><b style="color:green">Listo. Efraín puede iniciar sesión con su cuenta existente de efrasonik@gmail.com</b>';
+        } catch(e2) {
+          log.innerHTML += '❌ Error: ' + e2.message;
+        }
+      } else {
+        log.innerHTML += '❌ Error: ' + e.message;
+      }
+      btn.disabled = false;
+    }
+  };
+</script>
+<style>
+body{font-family:-apple-system,sans-serif;max-width:420px;margin:2rem auto;padding:1rem;background:#f5f6f8}
+.card{background:white;border-radius:12px;padding:1.5rem;box-shadow:0 2px 12px rgba(0,0,0,.08)}
+h2{color:#1F4E79;margin-bottom:.25rem}
+p{color:#666;font-size:13px;margin-bottom:1rem}
+label{display:block;font-size:11px;font-weight:700;color:#666;text-transform:uppercase;margin-bottom:4px;margin-top:.75rem}
+input{width:100%;padding:10px 12px;border:1.5px solid #E2E8EF;border-radius:8px;font-size:14px;box-sizing:border-box}
+button{width:100%;margin-top:1rem;padding:12px;background:#1F4E79;color:white;border:none;border-radius:8px;font-size:14px;font-weight:600;cursor:pointer}
+button:disabled{opacity:.6}
+#log{margin-top:1rem;background:#f0f4f8;border-radius:8px;padding:.75rem;font-size:12px;line-height:2;min-height:40px}
+.info{background:#EBF3FB;border-radius:8px;padding:.75rem;font-size:12px;margin-bottom:1rem;color:#1F4E79}
+</style>
+</head>
+<body>
+<div class="card">
+  <h2>👤 Crear usuario Efraín</h2>
+  <p>Crea la cuenta operativa para efrasonik@gmail.com</p>
+  <div class="info">
+    ℹ️ El usuario operativo puede usar: Cotizador, OCs, Surtido y Estado de cuenta.<br>
+    No tendrá acceso a: Finanzas, eliminar facturas ni configuración.
+  </div>
+  <label>Tu contraseña (admin)</label>
+  <input type="password" id="admin-pass" placeholder="Tu contraseña de villatoro.comercializadora@gmail.com">
+  <label>Contraseña para Efraín</label>
+  <input type="password" id="new-pass" placeholder="Mínimo 6 caracteres">
+  <button id="btn" onclick="crearUsuario()">Crear cuenta</button>
+  <div id="log"></div>
+</div>
+</body>
+</html>

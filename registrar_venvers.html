@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>Registrar fechas VenVers</title>
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+  import { getFirestore, collection, getDocs, doc, updateDoc, query, where } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+  import { getAuth, signInWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+
+  const app = initializeApp({
+    apiKey: "AIzaSyBT3KfII_PvabcO-ovZPBUhGXG2d9KPs6s",
+    authDomain: "villatoro-app.firebaseapp.com",
+    projectId: "villatoro-app",
+    storageBucket: "villatoro-app.firebasestorage.app",
+    messagingSenderId: "332539765979",
+    appId: "1:332539765979:web:630a3e9a626b37a19418fe"
+  });
+  const db = getFirestore(app);
+  const auth = getAuth(app);
+
+  // Fechas extraídas de correos VenVers
+  const VENVERS_DATES = {
+    'OC20848': '2026-07-28', 'OC20783': '2026-07-28', 'OC13400': '2026-07-28',
+    'OC13401': '2026-07-28', 'OC13444': '2026-07-28', 'OC13478': '2026-07-27',
+    'OC13479': '2026-07-27', 'OC13480': '2026-07-27', 'OC21682': '2026-07-27',
+    'OC20969': '2026-07-27', 'OC13470': '2026-07-24', 'OC13471': '2026-07-24',
+    'OC13473': '2026-07-24', 'OC13474': '2026-07-24', 'OC13475': '2026-07-24',
+    'OC20973': '2026-07-21', 'OC20659': '2026-07-21', 'OC20584': '2026-07-21',
+    'OC19972': '2026-07-21', 'OC20204': '2026-07-21', 'OC24652': '2026-05-27',
+    'OC24653': '2026-05-27', 'OC13366': '2026-05-26', 'OC69114': '2026-05-26',
+    'OC69116': '2026-05-26', 'OC69117': '2026-05-26', 'OC13368': '2026-05-26',
+    'OC13367': '2026-05-26', 'OC20745': '2026-05-08', 'OC20743': '2026-05-08',
+    'OC20351': '2026-05-08', 'OC20676': '2026-05-08', 'OC20738': '2026-05-08',
+    'OC20280': '2026-04-23', 'OC20542': '2026-04-20', 'OC20028': '2026-04-20',
+    'OC20098': '2026-04-20', 'OC20029': '2026-04-20', 'OC20426': '2026-04-20',
+    'OC19713': '2026-01-31', 'OC19777': '2026-01-31', 'OC19932': '2026-01-31',
+    'OC19935': '2026-01-31', 'OC19936': '2026-01-31', 'OC19982': '2026-01-31',
+    'OC19983': '2026-01-31', 'OC19984': '2026-01-31', 'OC19985': '2026-01-31',
+    'OC19986': '2026-01-31'
+  };
+
+  function addDays(dateStr, days) {
+    const d = new Date(dateStr);
+    d.setDate(d.getDate() + days);
+    return d.toISOString().split('T')[0];
+  }
+
+  window.registrar = async function() {
+    const pass = document.getElementById('pass').value;
+    const credito = parseInt(document.getElementById('credito').value) || 30;
+    const log = document.getElementById('log');
+    const btn = document.getElementById('btn');
+    btn.disabled = true;
+    log.innerHTML = 'Iniciando sesión...<br>';
+
+    try {
+      await signInWithEmailAndPassword(auth, 'villatoro.comercializadora@gmail.com', pass);
+      log.innerHTML += '✅ Sesión iniciada<br>';
+
+      // Get all facturas
+      const facSnap = await getDocs(collection(db, 'facturas'));
+      let actualizadas = 0, noEncontradas = [];
+
+      for (const d of facSnap.docs) {
+        const f = d.data();
+        const oc = (f.oc || '').trim().toUpperCase();
+        const fechaSubida = VENVERS_DATES[oc];
+        if (!fechaSubida) continue;
+
+        const fechaCobroEstimada = addDays(fechaSubida, credito);
+        await updateDoc(doc(db, 'facturas', d.id), {
+          fechaSubidaVenvers: fechaSubida,
+          venvers: 'subida',
+          fechaUltimaRevisionVenvers: fechaSubida,
+          fechaCobroEstimada: fechaCobroEstimada
+        });
+        log.innerHTML += `✅ ${oc} → subida: ${fechaSubida} · cobro est: ${fechaCobroEstimada}<br>`;
+        actualizadas++;
+      }
+
+      // Check which OCs weren't found in facturas
+      const ocsEncontradas = new Set(facSnap.docs.map(d => (d.data().oc||'').trim().toUpperCase()));
+      Object.keys(VENVERS_DATES).forEach(oc => {
+        if (!ocsEncontradas.has(oc)) noEncontradas.push(oc);
+      });
+
+      log.innerHTML += `<br><b>✅ ${actualizadas} facturas actualizadas</b>`;
+      if (noEncontradas.length) {
+        log.innerHTML += `<br><span style="color:#E65100">⚠️ ${noEncontradas.length} OCs de VenVers no encontradas en facturas: ${noEncontradas.join(', ')}</span>`;
+      }
+      btn.textContent = '✅ Listo';
+    } catch(e) {
+      log.innerHTML += '❌ Error: ' + e.message;
+      btn.disabled = false;
+    }
+  };
+</script>
+<style>
+body{font-family:-apple-system,sans-serif;max-width:600px;margin:2rem auto;padding:1rem;background:#f5f6f8}
+.card{background:white;border-radius:12px;padding:1.5rem;box-shadow:0 2px 12px rgba(0,0,0,.08)}
+h2{color:#1F4E79;margin-bottom:.25rem}
+p{color:#666;font-size:13px;margin-bottom:1rem}
+label{display:block;font-size:11px;font-weight:700;color:#666;text-transform:uppercase;margin-bottom:4px;margin-top:.75rem}
+input,select{width:100%;padding:10px 12px;border:1.5px solid #E2E8EF;border-radius:8px;font-size:14px;box-sizing:border-box}
+button{width:100%;margin-top:1rem;padding:12px;background:#1F4E79;color:white;border:none;border-radius:8px;font-size:14px;font-weight:600;cursor:pointer}
+button:disabled{opacity:.6}
+#log{margin-top:1rem;background:#f0f4f8;border-radius:8px;padding:.75rem;font-size:11px;line-height:2;max-height:400px;overflow-y:auto}
+</style>
+</head>
+<body>
+<div class="card">
+  <h2>📅 Registrar fechas VenVers</h2>
+  <p>Registra automáticamente las fechas de subida a VenVers extraídas de tus correos (49 facturas desde enero 2026) y calcula la fecha estimada de cobro.</p>
+  <label>Contraseña</label>
+  <input type="password" id="pass" placeholder="Tu contraseña">
+  <label>Días de crédito</label>
+  <select id="credito">
+    <option value="30">30 días</option>
+    <option value="15">15 días</option>
+    <option value="45">45 días</option>
+  </select>
+  <button id="btn" onclick="registrar()">Registrar fechas en Firebase</button>
+  <div id="log">Esperando...</div>
+</div>
+</body>
+</html>

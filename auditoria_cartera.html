@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>Auditoría Cartera Villatoro</title>
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+  import { getFirestore, collection, getDocs } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+  import { getAuth, signInWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+
+  const app = initializeApp({
+    apiKey: "AIzaSyBT3KfII_PvabcO-ovZPBUhGXG2d9KPs6s",
+    authDomain: "villatoro-app.firebaseapp.com",
+    projectId: "villatoro-app",
+  });
+  const db = getFirestore(app);
+  const auth = getAuth(app);
+  const fmt = n => '$' + (Number(n)||0).toLocaleString('es-MX', {minimumFractionDigits:2});
+
+  window.auditar = async function() {
+    const pass = document.getElementById('pass').value;
+    if(!pass) { alert('Ingresa tu contraseña'); return; }
+    const btn = document.getElementById('btn');
+    const out = document.getElementById('out');
+    btn.disabled = true;
+    out.innerHTML = '<p>Conectando...</p>';
+
+    try {
+      await signInWithEmailAndPassword(auth, 'villatoro.comercializadora@gmail.com', pass);
+
+      const [facSnap, speiSnap] = await Promise.all([
+        getDocs(collection(db, 'facturas')),
+        getDocs(collection(db, 'speis'))
+      ]);
+
+      // Classify facturas
+      const pendientes = [], pagadas = [], sospechosas = [];
+      let totalFacturado = 0, totalPendiente = 0, totalPagado = 0;
+
+      facSnap.docs.forEach(d => {
+        const f = d.data();
+        const total = Number(f.total)||0;
+        const fecha = f.fecha||'';
+        totalFacturado += total;
+
+        if(f.status === 'pagada') {
+          pagadas.push({...f, id:d.id, total});
+          totalPagado += total;
+        } else {
+          pendientes.push({...f, id:d.id, total});
+          totalPendiente += total;
+          // Sospechosa = pendiente con fecha anterior a 2026
+          if(fecha && fecha < '2026-01-01') {
+            sospechosas.push({...f, id:d.id, total});
+          }
+        }
+      });
+
+      // SPEIs
+      let totalSPEIs = 0, speisSinAplicar = 0, montoSinAplicar = 0;
+      speiSnap.docs.forEach(d => {
+        const s = d.data();
+        const monto = Number(s.monto)||0;
+        totalSPEIs += monto;
+        if(!s.aplicado) { speisSinAplicar++; montoSinAplicar += monto; }
+      });
+
+      // Discrepancia
+      const discrepancia = totalSPEIs - totalPagado;
+
+      let html = `
+        <div class="section">
+          <h3>📊 Resumen general</h3>
+          <div class="row"><span>Total facturado histórico</span><span class="val">${fmt(totalFacturado)}</span></div>
+          <div class="row"><span>Facturas marcadas pagadas (app)</span><span class="val green">${fmt(totalPagado)} (${pagadas.length} facturas)</span></div>
+          <div class="row"><span>Facturas pendientes de cobro</span><span class="val orange">${fmt(totalPendiente)} (${pendientes.length} facturas)</span></div>
+          <div class="row"><span>Total SPEIs registrados</span><span class="val">${fmt(totalSPEIs)} (${speiSnap.docs.length} SPEIs)</span></div>
+          <div class="row ${Math.abs(discrepancia) > 100 ? 'alert-row' : ''}">
+            <span>Diferencia SPEIs vs pagadas</span>
+            <span class="val ${Math.abs(discrepancia) > 100 ? 'red' : 'green'}">${fmt(Math.abs(discrepancia))} ${discrepancia > 0 ? '(SPEIs > pagadas)' : discrepancia < 0 ? '(pagadas > SPEIs)' : '✅ Cuadra'}</span>
+          </div>
+        </div>`;
+
+      if(sospechosas.length) {
+        html += `<div class="section warn">
+          <h3>⚠️ Facturas PENDIENTES con fecha anterior a 2026 (${sospechosas.length})</h3>
+          <p style="font-size:12px;margin-bottom:.5rem">Estas facturas podrían ya estar pagadas — verificar con tesorería</p>`;
+        sospechosas.sort((a,b) => a.fecha.localeCompare(b.fecha)).forEach(f => {
+          html += `<div class="row"><span>${f.fecha} · ${(f.folio||'').slice(-10)} · ${(f.razon||'').substring(0,20)}</span><span class="val orange">${fmt(f.total)}</span></div>`;
+        });
+        const totalSosp = sospechosas.reduce((s,f) => s+f.total, 0);
+        html += `<div class="row total"><span>Total sospechosas</span><span class="val orange">${fmt(totalSosp)}</span></div></div>`;
+      } else {
+        html += `<div class="section ok"><h3>✅ Sin facturas pendientes anteriores a 2026</h3></div>`;
+      }
+
+      if(speisSinAplicar > 0) {
+        html += `<div class="section warn">
+          <h3>⚠️ SPEIs sin aplicar: ${speisSinAplicar} — ${fmt(montoSinAplicar)}</h3>
+          <p style="font-size:12px">Estos pagos llegaron pero no están conciliados con ninguna factura</p>
+        </div>`;
+      }
+
+      // Estado de cuenta para tesorería
+      html += `<div class="section blue">
+        <h3>📋 Números para estado de cuenta a tesorería</h3>
+        <div class="row"><span>Total facturado</span><span class="val">${fmt(totalFacturado)}</span></div>
+        <div class="row"><span>Total cobrado (SPEIs)</span><span class="val green">${fmt(totalSPEIs)}</span></div>
+        <div class="row"><span><b>Saldo pendiente</b></span><span class="val orange"><b>${fmt(totalPendiente)}</b></span></div>
+      </div>`;
+
+      out.innerHTML = html;
+      btn.textContent = '✅ Listo';
+    } catch(e) {
+      out.innerHTML = `<p class="err">❌ Error: ${e.message}</p>`;
+      btn.disabled = false;
+    }
+  };
+</script>
+<style>
+  body { font-family: -apple-system, sans-serif; max-width: 640px; margin: 2rem auto; padding: 1rem; background: #f5f6f8; }
+  h2 { color: #1F4E79; }
+  input { width: 100%; padding: 10px; border: 1.5px solid #ddd; border-radius: 8px; font-size: 14px; box-sizing: border-box; margin: .5rem 0; }
+  button { width: 100%; padding: 12px; background: #1F4E79; color: white; border: none; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer; }
+  button:disabled { opacity: .6; }
+  .section { background: white; border-radius: 10px; padding: 1rem; margin-top: 1rem; box-shadow: 0 2px 8px rgba(0,0,0,.06); }
+  .section.warn { border-left: 4px solid #E65100; }
+  .section.ok { border-left: 4px solid #2E7D32; }
+  .section.blue { border-left: 4px solid #1F4E79; }
+  .section h3 { margin: 0 0 .75rem; font-size: 14px; color: #333; }
+  .row { display: flex; justify-content: space-between; padding: 5px 0; font-size: 13px; border-bottom: 1px solid #f0f0f0; }
+  .row.total { font-weight: 700; border-top: 2px solid #ddd; border-bottom: none; margin-top: 4px; }
+  .row.alert-row { background: #fff3e0; margin: 0 -1rem; padding: 5px 1rem; }
+  .val { font-weight: 600; }
+  .green { color: #2E7D32; }
+  .orange { color: #E65100; }
+  .red { color: #C62828; }
+  .err { color: red; }
+  p { font-size: 13px; color: #666; }
+</style>
+</head>
+<body>
+  <h2>🔍 Auditoría de cartera</h2>
+  <p>Revisa que los números de facturas, SPEIs y saldo pendiente cuadren antes de enviar estado de cuenta.</p>
+  <input type="password" id="pass" placeholder="Contraseña de villatoro.comercializadora@gmail.com">
+  <button id="btn" onclick="auditar()">🔍 Auditar</button>
+  <div id="out"></div>
+</body>
+</html>

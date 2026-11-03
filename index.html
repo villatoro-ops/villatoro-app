@@ -779,12 +779,13 @@ button{font-family:inherit;cursor:pointer}
   </div>
   <div id="dropdown" class="dropdown"></div>
   <div style="margin-top:.5rem">
-    <div class="lbl">📦 Pegar link de Mercado Libre o Amazon</div>
+    <div class="lbl">🔎 Buscar precio en Mercado Libre</div>
     <div class="manual-row">
-      <input type="text" id="ml-link" placeholder="https://www.mercadolibre.com.mx/... o amazon.com.mx/..." style="font-size:12px">
-      <div class="use-btn" onclick="usarLinkML()" id="ml-btn">Importar</div>
+      <input type="text" id="ml-query" placeholder="Ej: filtro aceite L200, bujía Hilux..." style="font-size:12px" onkeydown="if(event.key==='Enter')buscarEnML()">
+      <div class="use-btn" onclick="buscarEnML()" id="ml-btn">Buscar</div>
     </div>
     <div id="ml-status" style="font-size:11px;color:#888;margin-top:3px;display:none"></div>
+    <div id="ml-resultados" style="display:none;margin-top:6px;border:1.5px solid var(--border);border-radius:var(--radius-sm);max-height:200px;overflow-y:auto;background:#fff"></div>
   </div>
   <div style="margin-top:.5rem">
     <div class="lbl">O escribe manualmente si no está en lista</div>
@@ -4383,67 +4384,68 @@ function selectProd(i){
   updateRange();
 }
 
-async function usarLinkML(){
-  const url = document.getElementById('ml-link').value.trim();
-  if(!url){ alert('Pega un link de Mercado Libre o Amazon primero'); return; }
+async function buscarEnML(){
+  const q = document.getElementById('ml-query').value.trim();
+  if(!q){ alert('Escribe qué quieres buscar'); return; }
   const btn = document.getElementById('ml-btn');
   const status = document.getElementById('ml-status');
+  const resultados = document.getElementById('ml-resultados');
   btn.textContent = '...';
   btn.style.pointerEvents = 'none';
   status.style.display = 'block';
   status.style.color = '#888';
-  status.textContent = 'Consultando precio...';
+  status.textContent = 'Buscando en Mercado Libre...';
+  resultados.style.display = 'none';
+  resultados.innerHTML = '';
 
   try {
-    // Detectar si es ML o Amazon
-    const isML = url.includes('mercadolibre') || url.includes('mercadopago') || url.includes('meli');
-    const isAmazon = url.includes('amazon');
+    const resp = await fetch(`https://api.mercadolibre.com/sites/MLM/search?q=${encodeURIComponent(q)}&limit=8`);
+    if(!resp.ok) throw new Error('No se pudo conectar con Mercado Libre.');
+    const data = await resp.json();
+    const items = (data.results||[]).filter(r => r.price > 0);
+    if(!items.length) throw new Error('Sin resultados. Intenta con otras palabras.');
 
-    if(isML) {
-      // Extraer item ID de ML (formato: MLM-XXXXXXXXX o MLM-XXXXXXXXX en la URL)
-      const match = url.match(/MLM-?(\d+)/i);
-      if(!match) throw new Error('No se encontró el ID del producto en el link de ML. Verifica que sea un link directo a un artículo.');
-      const itemId = 'MLM' + match[1];
-      const resp = await fetch(`https://api.mercadolibre.com/items/${itemId}`);
-      if(!resp.ok) throw new Error('No se pudo obtener el producto. Verifica el link.');
-      const data = await resp.json();
-      const precio = data.price;
-      const nombre = data.title;
-      if(!precio || !nombre) throw new Error('No se pudo leer el precio del producto.');
-
-      // Usar el precio de ML como costo (precio de compra)
-      // El piso se calcula con margen 27%, precio sugerido con margen 40%
-      const costo = precio;
-      const unid = document.getElementById('manual-unid').value || 'PIEZA';
-      selProd = {n: nombre.toUpperCase(), c: 'Manual', u: unid, k: costo, h: precio, m: precio, e: false, _mlUrl: url};
-      document.getElementById('search').value = '';
-      document.getElementById('dropdown').style.display = 'none';
-      document.getElementById('prod-name-lbl').textContent = selProd.n;
-      document.getElementById('add-card').style.display = 'block';
-      document.getElementById('est-note').style.display = 'none';
-      document.getElementById('price-range').style.display = 'block';
-      const margin = getMargin('Manual');
-      const def = Math.round(costo / (1 - margin) * 10) / 10;
-      document.getElementById('pu').value = def;
-      document.getElementById('manual').value = '';
-      document.getElementById('ml-link').value = '';
-      updateRange();
-      status.style.color = '#2E7D32';
-      status.textContent = `✓ ${nombre} — precio ML: ${fmt(precio)}. Ajusta el P/U si tu costo real difiere.`;
-    } else if(isAmazon) {
-      // Amazon no tiene API pública — mostrar instrucción de captura manual
-      status.style.color = '#C8973A';
-      status.textContent = '⚠️ Amazon no permite lectura automática. Copia el nombre y precio manualmente abajo.';
-    } else {
-      throw new Error('Solo se soportan links de Mercado Libre por ahora. Para Amazon usa captura manual.');
-    }
+    status.textContent = `${items.length} resultados — selecciona el que coincida:`;
+    status.style.color = '#555';
+    resultados.style.display = 'block';
+    resultados.innerHTML = items.map((it,i) => `
+      <div onclick="seleccionarMLItem(${i})" data-idx="${i}" style="padding:8px 10px;border-bottom:1px solid #eee;cursor:pointer;display:flex;justify-content:space-between;align-items:center;gap:8px" onmouseover="this.style.background='#f5f5f5'" onmouseout="this.style.background=''">
+        <div style="font-size:12px;line-height:1.3;flex:1">${it.title}</div>
+        <div style="font-size:13px;font-weight:700;color:#2E7D32;white-space:nowrap">${fmt(it.price)}</div>
+      </div>
+    `).join('');
+    // Guardar resultados para selección posterior
+    window._mlItems = items;
   } catch(e) {
     status.style.color = '#c0392b';
-    status.textContent = '✗ ' + (e.message || 'Error al leer el link.');
+    status.textContent = '✗ ' + (e.message || 'Error al buscar.');
   } finally {
-    btn.textContent = 'Importar';
+    btn.textContent = 'Buscar';
     btn.style.pointerEvents = 'auto';
   }
+}
+
+function seleccionarMLItem(i){
+  const it = window._mlItems[i];
+  if(!it) return;
+  const unid = document.getElementById('manual-unid').value || 'PIEZA';
+  const costo = it.price;
+  selProd = {n: it.title.toUpperCase(), c: 'Manual', u: unid, k: costo, h: costo, m: costo, e: false};
+  document.getElementById('search').value = '';
+  document.getElementById('dropdown').style.display = 'none';
+  document.getElementById('ml-resultados').style.display = 'none';
+  document.getElementById('ml-query').value = '';
+  document.getElementById('ml-status').textContent = `✓ Seleccionado: ${it.title} — precio ML: ${fmt(costo)}`;
+  document.getElementById('ml-status').style.color = '#2E7D32';
+  document.getElementById('prod-name-lbl').textContent = selProd.n;
+  document.getElementById('add-card').style.display = 'block';
+  document.getElementById('est-note').style.display = 'none';
+  document.getElementById('price-range').style.display = 'block';
+  const margin = getMargin('Manual');
+  const def = Math.round(costo / (1 - margin) * 10) / 10;
+  document.getElementById('pu').value = def;
+  document.getElementById('manual').value = '';
+  updateRange();
 }
 
 function useManual(){

@@ -779,6 +779,14 @@ button{font-family:inherit;cursor:pointer}
   </div>
   <div id="dropdown" class="dropdown"></div>
   <div style="margin-top:.5rem">
+    <div class="lbl">📦 Pegar link de Mercado Libre o Amazon</div>
+    <div class="manual-row">
+      <input type="text" id="ml-link" placeholder="https://www.mercadolibre.com.mx/... o amazon.com.mx/..." style="font-size:12px">
+      <div class="use-btn" onclick="usarLinkML()" id="ml-btn">Importar</div>
+    </div>
+    <div id="ml-status" style="font-size:11px;color:#888;margin-top:3px;display:none"></div>
+  </div>
+  <div style="margin-top:.5rem">
     <div class="lbl">O escribe manualmente si no está en lista</div>
     <div class="manual-row">
       <input type="text" id="manual" placeholder="Nombre del artículo...">
@@ -4373,6 +4381,69 @@ function selectProd(i){
   document.getElementById('margin-hint').textContent=`Margen sugerido para ${selProd.c}: ${Math.round(margin*100)}%`;
   document.getElementById('margin-hint').style.display='block';
   updateRange();
+}
+
+async function usarLinkML(){
+  const url = document.getElementById('ml-link').value.trim();
+  if(!url){ alert('Pega un link de Mercado Libre o Amazon primero'); return; }
+  const btn = document.getElementById('ml-btn');
+  const status = document.getElementById('ml-status');
+  btn.textContent = '...';
+  btn.style.pointerEvents = 'none';
+  status.style.display = 'block';
+  status.style.color = '#888';
+  status.textContent = 'Consultando precio...';
+
+  try {
+    // Detectar si es ML o Amazon
+    const isML = url.includes('mercadolibre') || url.includes('mercadopago') || url.includes('meli');
+    const isAmazon = url.includes('amazon');
+
+    if(isML) {
+      // Extraer item ID de ML (formato: MLM-XXXXXXXXX o MLM-XXXXXXXXX en la URL)
+      const match = url.match(/MLM-?(\d+)/i);
+      if(!match) throw new Error('No se encontró el ID del producto en el link de ML. Verifica que sea un link directo a un artículo.');
+      const itemId = 'MLM' + match[1];
+      const resp = await fetch(`https://api.mercadolibre.com/items/${itemId}`);
+      if(!resp.ok) throw new Error('No se pudo obtener el producto. Verifica el link.');
+      const data = await resp.json();
+      const precio = data.price;
+      const nombre = data.title;
+      if(!precio || !nombre) throw new Error('No se pudo leer el precio del producto.');
+
+      // Usar el precio de ML como costo (precio de compra)
+      // El piso se calcula con margen 27%, precio sugerido con margen 40%
+      const costo = precio;
+      const unid = document.getElementById('manual-unid').value || 'PIEZA';
+      selProd = {n: nombre.toUpperCase(), c: 'Manual', u: unid, k: costo, h: precio, m: precio, e: false, _mlUrl: url};
+      document.getElementById('search').value = '';
+      document.getElementById('dropdown').style.display = 'none';
+      document.getElementById('prod-name-lbl').textContent = selProd.n;
+      document.getElementById('add-card').style.display = 'block';
+      document.getElementById('est-note').style.display = 'none';
+      document.getElementById('price-range').style.display = 'block';
+      const margin = getMargin('Manual');
+      const def = Math.round(costo / (1 - margin) * 10) / 10;
+      document.getElementById('pu').value = def;
+      document.getElementById('manual').value = '';
+      document.getElementById('ml-link').value = '';
+      updateRange();
+      status.style.color = '#2E7D32';
+      status.textContent = `✓ ${nombre} — precio ML: ${fmt(precio)}. Ajusta el P/U si tu costo real difiere.`;
+    } else if(isAmazon) {
+      // Amazon no tiene API pública — mostrar instrucción de captura manual
+      status.style.color = '#C8973A';
+      status.textContent = '⚠️ Amazon no permite lectura automática. Copia el nombre y precio manualmente abajo.';
+    } else {
+      throw new Error('Solo se soportan links de Mercado Libre por ahora. Para Amazon usa captura manual.');
+    }
+  } catch(e) {
+    status.style.color = '#c0392b';
+    status.textContent = '✗ ' + (e.message || 'Error al leer el link.');
+  } finally {
+    btn.textContent = 'Importar';
+    btn.style.pointerEvents = 'auto';
+  }
 }
 
 function useManual(){
